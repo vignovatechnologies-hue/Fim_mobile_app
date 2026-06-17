@@ -67,21 +67,22 @@ function Dashboard() {
   const user = getCurrentUser();
   const [confirmPay, setConfirmPay] = useState(false);
   const [paid, setPaid] = useState(false);
-  
+
   const [summary, setSummary] = useState<Summary | null>(null);
   const [upcoming, setUpcoming] = useState<Emi[]>([]);
   const [loading, setLoading] = useState(true);
+  const [greeting, setGreeting] = useState("Good morning");
 
   const fetchData = async () => {
     try {
       const summaryData = await apiFetch<Summary>("/api/dashboard/summary");
       setSummary(summaryData);
-      
+
       const loansData = await apiFetch<Emi[]>("/api/loans");
       // Filter out paid loans and show top 3 closest due
       const unpaid = loansData.filter((l) => !l.paid).slice(0, 3);
       setUpcoming(unpaid);
-      
+
       // If there are no unpaid loans, consider them "all paid this cycle"
       if (unpaid.length === 0 && loansData.length > 0) {
         setPaid(true);
@@ -97,6 +98,26 @@ function Dashboard() {
 
   useEffect(() => {
     fetchData();
+
+    // Calculate greeting based on Indian Standard Time (IST)
+    try {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        hour: "numeric",
+        hour12: false,
+      });
+      const hour = parseInt(formatter.format(now), 10);
+      if (hour >= 5 && hour < 12) {
+        setGreeting("Good morning");
+      } else if (hour >= 12 && hour < 17) {
+        setGreeting("Good afternoon");
+      } else {
+        setGreeting("Good evening");
+      }
+    } catch (err) {
+      console.error("Error setting dynamic greeting:", err);
+    }
   }, []);
 
   const handlePayAll = async () => {
@@ -144,7 +165,7 @@ function Dashboard() {
               {user?.initials || "FI"}
             </div>
             <div className="text-left">
-              <p className="text-xs text-muted-foreground">Good morning</p>
+              <p className="text-xs text-muted-foreground">{greeting}</p>
               <p className="font-display font-bold text-foreground">{user?.name || "Guest"}</p>
             </div>
           </Link>
@@ -199,8 +220,8 @@ function Dashboard() {
                 {paid || upcoming.length === 0 ? "All EMIs paid this month" : `Smart Pay ${upcoming.length} EMIs`}
               </p>
               <p className="text-xs text-muted-foreground">
-                {paid || upcoming.length === 0 
-                  ? "Next due in 30 days" 
+                {paid || upcoming.length === 0
+                  ? "Next due in 30 days"
                   : `One tap. ₹ ${totalUnpaidEmi.toLocaleString("en-IN")} due soon`}
               </p>
             </div>

@@ -53,7 +53,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
             <span>100%</span>
           </div>
         </div>
-        <main className="flex-1 overflow-y-auto pb-[88px] hide-scrollbar">{children}</main>
+        <main className="flex-1 overflow-y-auto pb-[88px] pt-[env(safe-area-inset-top)] hide-scrollbar">{children}</main>
         <BottomNav />
       </div>
     </div>
