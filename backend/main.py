@@ -6,6 +6,63 @@ from routes import auth, loans, transactions, income, savings, profile, dashboar
 
 app = FastAPI(title="FIM — Financial Intelligence Manager API")
 
+def check_and_update_db():
+    from database import engine
+    from sqlalchemy import text
+    try:
+        with engine.begin() as conn:
+            # Check if start_date exists in loans
+            res = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='loans' AND column_name='start_date'"
+            ))
+            if not res.fetchone():
+                conn.execute(text("ALTER TABLE loans ADD COLUMN start_date TIMESTAMP WITHOUT TIME ZONE NULL"))
+                print("[Migration] Added start_date column to loans table")
+            
+            res2 = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='loans' AND column_name='end_date'"
+            ))
+            if not res2.fetchone():
+                conn.execute(text("ALTER TABLE loans ADD COLUMN end_date TIMESTAMP WITHOUT TIME ZONE NULL"))
+                print("[Migration] Added end_date column to loans table")
+                
+            # Check if fcm_token exists in users
+            res3 = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='fcm_token'"
+            ))
+            if not res3.fetchone():
+                conn.execute(text("ALTER TABLE users ADD COLUMN fcm_token VARCHAR(255) NULL"))
+                print("[Migration] Added fcm_token column to users table")
+    except Exception as e:
+        print(f"[Migration] Error updating database tables: {e}")
+
+async def start_reminder_scheduler():
+    import asyncio
+    from database import SessionLocal
+    from reminders import check_and_send_reminders
+    await asyncio.sleep(5)
+    while True:
+        try:
+            print("[Scheduler] Running daily check for unpaid EMIs...")
+            db = SessionLocal()
+            try:
+                result = check_and_send_reminders(db)
+                print(f"[Scheduler] Done. Reminders check result: {result}")
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"[Scheduler] Error in reminder scheduler: {e}")
+        # Sleep for 24 hours
+        await asyncio.sleep(24 * 3600)
+
+@app.on_event("startup")
+def on_startup():
+    check_and_update_db()
+    import asyncio
+    asyncio.create_task(start_reminder_scheduler())
+
+
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,

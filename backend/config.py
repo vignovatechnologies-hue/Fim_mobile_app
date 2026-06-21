@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     SMTP_FROM_EMAIL: Optional[str] = None
 
+    # Twilio SMS Configuration
+    TWILIO_ACCOUNT_SID: Optional[str] = None
+    TWILIO_AUTH_TOKEN: Optional[str] = None
+    TWILIO_FROM_NUMBER: Optional[str] = None
+
+    # Gemini AI Configuration
+    GEMINI_API_KEY: Optional[str] = None
+
+
     @property
     def database_url(self) -> str:
         import urllib.parse

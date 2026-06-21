@@ -79,3 +79,65 @@ def add_income(payload: dict = Body(...), current_user: User = Depends(get_curre
         "when": "Just now",
         "color": colors.get(src_type, "bg-emerald-100 text-emerald-700")
     }
+
+
+@router.put("/api/income/{txn_id}")
+def update_income(
+    txn_id: int,
+    payload: dict = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    name = payload.get("name")
+    amount = payload.get("amount")
+    src_type = payload.get("type", "Salary")
+    
+    if not name or not amount:
+        raise HTTPException(status_code=400, detail="Name and amount are required")
+        
+    txn = db.query(Transaction).filter(
+        Transaction.id == txn_id,
+        Transaction.user_id == current_user.id,
+        Transaction.category == "Income"
+    ).first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Income source not found")
+        
+    txn.name = name.strip()
+    txn.amount = float(amount)
+    db.commit()
+    db.refresh(txn)
+    
+    colors = {
+        "Salary": "bg-emerald-100 text-emerald-700",
+        "Freelance": "bg-sky-100 text-sky-700",
+        "Investment": "bg-violet-100 text-violet-700",
+        "Rental": "bg-amber-100 text-amber-700"
+    }
+    
+    return {
+        "id": txn.id,
+        "name": txn.name,
+        "type": src_type,
+        "amount": txn.amount,
+        "when": txn.when.strftime("%d %b") if (datetime.datetime.utcnow() - txn.when).days > 1 else "Monthly",
+        "color": colors.get(src_type, "bg-emerald-100 text-emerald-700")
+    }
+
+
+@router.delete("/api/income/{txn_id}")
+def delete_income(
+    txn_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    txn = db.query(Transaction).filter(
+        Transaction.id == txn_id,
+        Transaction.user_id == current_user.id,
+        Transaction.category == "Income"
+    ).first()
+    if not txn:
+        raise HTTPException(status_code=404, detail="Income source not found")
+    db.delete(txn)
+    db.commit()
+    return {"status": "success", "message": "Income source deleted successfully"}

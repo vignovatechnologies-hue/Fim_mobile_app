@@ -52,6 +52,23 @@ class LoanCreate(BaseModel):
     emi: float
     rate: float
     due_day: Optional[int] = 15
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    left_amount: Optional[float] = None
+    total_tenure: Optional[int] = None
+    paid_tenure: Optional[int] = None
+
+class LoanUpdate(BaseModel):
+    name: Optional[str] = None
+    type: Optional[str] = None
+    emi: Optional[float] = None
+    rate: Optional[float] = None
+    due_day: Optional[int] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    left_amount: Optional[float] = None
+    total_tenure: Optional[int] = None
+    paid_tenure: Optional[int] = None
 
 class LoanResponse(BaseModel):
     id: int
@@ -64,6 +81,8 @@ class LoanResponse(BaseModel):
     due: int = Field(..., alias="due_day")
     logo: str
     paid: bool = Field(..., alias="paid_this_month")
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -83,7 +102,9 @@ class LoanResponse(BaseModel):
             rate=loan.rate,
             due_day=loan.due_day,
             logo=loan.logo,
-            paid_this_month=loan.paid_this_month
+            paid_this_month=loan.paid_this_month,
+            start_date=loan.start_date.isoformat() if loan.start_date else None,
+            end_date=loan.end_date.isoformat() if loan.end_date else None
         )
 
 # Transaction Schemas
@@ -136,8 +157,10 @@ class BudgetCategoryResponse(BaseModel):
 # Savings Goal Schemas
 class SavingsGoalCreate(BaseModel):
     name: str
-    target: float       # frontend sends "target"
-    model_config = {"populate_by_name": True}
+    target: float = Field(..., alias="target_amount")
+
+    class Config:
+        populate_by_name = True
 
 class SavingsGoalResponse(BaseModel):
     id: int
@@ -184,3 +207,6 @@ class DashboardSummary(BaseModel):
     savings_goal_text: str
     next_emi_days: str
     next_emi_name: str
+
+class FCMTokenRegister(BaseModel):
+    fcm_token: str

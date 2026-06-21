@@ -17,6 +17,7 @@ class User(Base):
     reset_code = Column(String, nullable=True)
     reset_expires = Column(DateTime, nullable=True)
     premium = Column(Boolean, default=False)
+    fcm_token = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     loans = relationship("Loan", back_populates="user", cascade="all, delete-orphan")
@@ -41,6 +42,8 @@ class Loan(Base):
     due_day = Column(Integer, nullable=False)  # Day of the month
     logo = Column(String, nullable=False)
     paid_this_month = Column(Boolean, default=False)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="loans")

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Bank, User
-from schemas import UserResponse, BankCreate, BankResponse
+from schemas import UserResponse, BankCreate, BankResponse, FCMTokenRegister
 from dependencies import get_current_user
 
 router = APIRouter(tags=["profile"])
@@ -229,3 +229,15 @@ def generate_statement(payload: dict = Body(...), current_user: User = Depends(g
         "filename": f"FIM_Statement_{current_user.name.replace(' ', '_')}_{stmt_range}.pdf",
         "message": f"Statement generated for {stmt_range}"
     }
+
+
+# ── REGISTER FCM Token ────────────────────────────────────────────────────────
+@router.post("/api/user/fcm-token")
+def register_fcm_token(
+    payload: FCMTokenRegister,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current_user.fcm_token = payload.fcm_token.strip()
+    db.commit()
+    return {"message": "FCM token registered successfully"}

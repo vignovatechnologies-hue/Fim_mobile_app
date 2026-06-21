@@ -83,3 +83,36 @@ def add_savings_contribution(
     db.commit()
     db.refresh(goal)
     return JSONResponse(_serialize(goal))
+
+
+@router.put("/api/savings/{goal_id}")
+def update_savings_goal(
+    goal_id: int,
+    goal_data: SavingsGoalCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    goal = db.query(SavingsGoal).filter(SavingsGoal.id == goal_id, SavingsGoal.user_id == current_user.id).first()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    goal.name = goal_data.name.strip()
+    goal.target_amount = goal_data.target
+    db.commit()
+    db.refresh(goal)
+    return JSONResponse(_serialize(goal))
+
+
+@router.delete("/api/savings/{goal_id}")
+def delete_savings_goal(
+    goal_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    goal = db.query(SavingsGoal).filter(SavingsGoal.id == goal_id, SavingsGoal.user_id == current_user.id).first()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    
+    db.delete(goal)
+    db.commit()
+    return JSONResponse({"status": "success", "message": "Goal deleted successfully"})
