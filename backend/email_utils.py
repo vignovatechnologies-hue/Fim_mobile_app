@@ -33,6 +33,7 @@ def send_via_brevo(to_email: str, recipient_name: str, subject: str, html_conten
         print(f"[Brevo] ❌ Exception: {e}")
         return False
 
+def send_via_smtp(to_email: str, recipient_name: str, subject: str, html_content: str) -> bool:
     """Sends email using SMTP (Nodemailer equivalent)."""
     try:
         msg = MIMEMultipart("alternative")
