@@ -4,7 +4,11 @@ import Constants from "expo-constants";
 import { router } from "expo-router";
 
 const getApiUrl = () => {
-  // Resolve host IP dynamically during Expo development so real devices can communicate with the backend
+  // In production builds, use the deployed Render backend
+  if (!__DEV__) {
+    return `https://fim-mobile-app-backend.onrender.com`;
+  }
+  // In development, resolve host IP dynamically so real devices can communicate with the local backend
   const debuggerHost = Constants.expoConfig?.hostUri;
   const host = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
   return `http://${host}:8000`;
