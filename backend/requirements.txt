@@ -11,4 +11,5 @@ python-multipart==0.0.9
 razorpay==1.4.2
 firebase-admin
 google-genai>=1.0.0
+requests>=2.31.0
 

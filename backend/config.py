@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: Optional[str] = None
     TWILIO_FROM_NUMBER: Optional[str] = None
 
+    # Brevo (Sendinblue) Email API — loaded from .env
+    BREVO_API_KEY: Optional[str] = None
+    BREVO_FROM_EMAIL: Optional[str] = None
+
     # Gemini AI Configuration
     GEMINI_API_KEY: Optional[str] = None
 

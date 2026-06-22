@@ -4,7 +4,35 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from config import settings
 
-def send_via_smtp(to_email: str, recipient_name: str, subject: str, html_content: str) -> bool:
+def send_via_brevo(to_email: str, recipient_name: str, subject: str, html_content: str) -> bool:
+    """Sends email using Brevo (Sendinblue) HTTP API — works on Render free tier."""
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": settings.BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+    payload = {
+        "sender": {
+            "name": "FIM — Financial Intelligence Manager",
+            "email": settings.BREVO_FROM_EMAIL
+        },
+        "to": [{"email": to_email, "name": recipient_name}],
+        "subject": subject,
+        "htmlContent": html_content
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        if response.status_code in (200, 201, 202):
+            print(f"[Brevo] ✅ Email sent successfully to {to_email}")
+            return True
+        else:
+            print(f"[Brevo] ❌ Failed (HTTP {response.status_code}): {response.text}")
+            return False
+    except Exception as e:
+        print(f"[Brevo] ❌ Exception: {e}")
+        return False
+
     """Sends email using SMTP (Nodemailer equivalent)."""
     try:
         msg = MIMEMultipart("alternative")
@@ -206,21 +234,25 @@ def send_otp_email(to_email: str, recipient_name: str, otp: str, purpose: str) -
     </html>
     """
 
-    # Check if SMTP is configured
-    if settings.SMTP_HOST and settings.SMTP_FROM_EMAIL:
-        return send_via_smtp(to_email, recipient_name, subject, html_content)
-        
-    # Check if SendGrid API is configured
+    # 1. Try Brevo HTTP API first (works on Render free tier)
+    if settings.BREVO_API_KEY and settings.BREVO_FROM_EMAIL:
+        return send_via_brevo(to_email, recipient_name, subject, html_content)
+
+    # 2. Try SendGrid HTTP API
     elif settings.SENDGRID_API_KEY and settings.SENDGRID_FROM_EMAIL and not settings.SENDGRID_API_KEY.startswith("SG.YOUR_"):
         return send_via_sendgrid_api(to_email, recipient_name, subject, html_content)
-        
-    # Fallback to local console print (very useful for local dev)
+
+    # 3. Try SMTP (may be blocked on Render free tier)
+    elif settings.SMTP_HOST and settings.SMTP_FROM_EMAIL:
+        return send_via_smtp(to_email, recipient_name, subject, html_content)
+
+    # 4. Fallback: print to console (local dev)
     else:
         print("\n" + "="*60)
         print(f"📧 [EMAIL MOCK FALLBACK] ({purpose.upper()})")
         print(f"To: {recipient_name} <{to_email}>")
         print(f"Subject: {subject}")
         print(f"OTP Code: {otp}")
-        print("💡 Config SMTP or SendGrid in backend/.env for real delivery.")
+        print("💡 Set BREVO_API_KEY and BREVO_FROM_EMAIL in backend/.env for real delivery.")
         print("="*60 + "\n")
         return True
