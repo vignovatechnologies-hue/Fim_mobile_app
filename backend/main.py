@@ -57,6 +57,12 @@ async def start_reminder_scheduler():
 
 @app.on_event("startup")
 def on_startup():
+    # Auto-create all tables if they don't exist (safe for fresh deployments)
+    from database import Base, engine
+    from init_db import seed_database
+    Base.metadata.create_all(bind=engine)
+    print("[Startup] Database tables created/verified.")
+    seed_database()
     check_and_update_db()
     import asyncio
     asyncio.create_task(start_reminder_scheduler())
