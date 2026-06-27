@@ -29,17 +29,33 @@ export function notifyAuthChange() {
   listeners.forEach(l => l());
 }
 
+// In-memory caches — avoids 2 AsyncStorage disk reads on every API request
+let _cachedToken: string | null | undefined = undefined;
+let _cachedUrl: string | null | undefined = undefined;
+
+/** Call this on sign-out or whenever token/URL changes to invalidate the cache. */
+export function clearApiCache() {
+  _cachedToken = undefined;
+  _cachedUrl = undefined;
+}
+
 export async function apiFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
-  const customUrl = await AsyncStorage.getItem("fim.api.url");
-  const baseUrl = customUrl || API_URL;
+  // Use cached URL, fall back to disk only on first call
+  if (_cachedUrl === undefined) {
+    _cachedUrl = await AsyncStorage.getItem("fim.api.url");
+  }
+  const baseUrl = _cachedUrl || API_URL;
   const url = path.startsWith("http") ? path : `${baseUrl}${path}`;
   const headers = new Headers(options.headers || {});
-  
+
   headers.set("Bypass-Tunnel-Reminder", "true");
-  
-  const token = await AsyncStorage.getItem(TOKEN_KEY);
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+
+  // Use cached token, fall back to disk only on first call
+  if (_cachedToken === undefined) {
+    _cachedToken = await AsyncStorage.getItem(TOKEN_KEY);
+  }
+  if (_cachedToken) {
+    headers.set("Authorization", `Bearer ${_cachedToken}`);
   }
 
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {

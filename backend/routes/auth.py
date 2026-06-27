@@ -1,6 +1,6 @@
 import random
 import datetime
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -12,7 +12,7 @@ from email_utils import send_otp_email
 router = APIRouter(tags=["auth"])
 
 @router.post("/api/auth/signup")
-def signup(user_data: UserCreate, db: Session = Depends(get_db)):
+def signup(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     email_clean = user_data.email.lower().strip()
     if not user_data.name.strip() or len(user_data.password) < 4:
         raise HTTPException(status_code=400, detail="Name and password (min 4 chars) are required")
@@ -53,8 +53,9 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add_all(budgets)
     db.commit()
 
-    # Send real verification code email
-    send_otp_email(
+    # Send OTP email in background — API responds instantly, email is sent concurrently
+    background_tasks.add_task(
+        send_otp_email,
         to_email=user.email,
         recipient_name=user.name,
         otp=verification_code,
@@ -136,7 +137,7 @@ def verify_email(verify_data: UserVerify, db: Session = Depends(get_db)):
     }
 
 @router.post("/api/auth/resend")
-def resend_code(payload: dict = Body(...), db: Session = Depends(get_db)):
+def resend_code(background_tasks: BackgroundTasks, payload: dict = Body(...), db: Session = Depends(get_db)):
     email = payload.get("email")
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
@@ -149,8 +150,9 @@ def resend_code(payload: dict = Body(...), db: Session = Depends(get_db)):
     user.verification_expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
     db.commit()
 
-    # Send real verification code email
-    send_otp_email(
+    # Send OTP email in background — API responds instantly
+    background_tasks.add_task(
+        send_otp_email,
         to_email=user.email,
         recipient_name=user.name,
         otp=code,
@@ -160,7 +162,7 @@ def resend_code(payload: dict = Body(...), db: Session = Depends(get_db)):
     return {"message": "Verification code resent"}
 
 @router.post("/api/auth/request-reset")
-def request_reset(reset_data: UserResetRequest, db: Session = Depends(get_db)):
+def request_reset(reset_data: UserResetRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == reset_data.email.lower()).first()
     if not user:
         raise HTTPException(status_code=404, detail="No account found for this email")
@@ -170,8 +172,9 @@ def request_reset(reset_data: UserResetRequest, db: Session = Depends(get_db)):
     user.reset_expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
     db.commit()
 
-    # Send reset code email
-    send_otp_email(
+    # Send reset code email in background — API responds instantly
+    background_tasks.add_task(
+        send_otp_email,
         to_email=user.email,
         recipient_name=user.name,
         otp=code,

@@ -28,36 +28,36 @@ const TouchableOpacity = TouchableOpacityComponent as any;
 const View = ViewComponent as any;
 const ScrollView = ScrollViewComponent as any;
 import {
-  ChevronLeft  as ChevronLeftIcon,
+  ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  ChevronDown  as ChevronDownIcon,
-  ChevronUp    as ChevronUpIcon,
-  Check        as CheckIcon,
+  ChevronDown as ChevronDownIcon,
+  ChevronUp as ChevronUpIcon,
+  Check as CheckIcon,
   CalendarDays as CalendarDaysIcon,
 } from "lucide-react-native";
 
-const ChevronLeft  = ChevronLeftIcon  as any;
+const ChevronLeft = ChevronLeftIcon as any;
 const ChevronRight = ChevronRightIcon as any;
-const ChevronDown  = ChevronDownIcon  as any;
-const ChevronUp    = ChevronUpIcon    as any;
-const CheckIcon2   = CheckIcon        as any;
+const ChevronDown = ChevronDownIcon as any;
+const ChevronUp = ChevronUpIcon as any;
+const CheckIcon2 = CheckIcon as any;
 const CalendarIcon = CalendarDaysIcon as any;
 
 // ─── constants ────────────────────────────────────────────────────────────────
-const MONTHS_FULL  = ["January","February","March","April","May","June",
-                      "July","August","September","October","November","December"];
-const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun",
-                      "Jul","Aug","Sep","Oct","Nov","Dec"];
-const DOW          = ["Su","Mo","Tu","We","Th","Fr","Sa"];
-const THIS_YEAR    = new Date().getFullYear();
-const BATCH        = 30;   // how many years to add per load
-const ITEM_H       = 50;   // year row height
+const MONTHS_FULL = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const THIS_YEAR = new Date().getFullYear();
+const BATCH = 30;   // how many years to add per load
+const ITEM_H = 50;   // year row height
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-const pad2       = (n: number) => String(n).padStart(2, "0");
-const dimMonth   = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
-const firstDay   = (y: number, m: number) => new Date(y, m, 1).getDay();
-const dateToStr  = (d: Date | null) =>
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const dimMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate();
+const firstDay = (y: number, m: number) => new Date(y, m, 1).getDay();
+const dateToStr = (d: Date | null) =>
   d ? `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}` : "";
 
 const strToDate = (s: string): Date | null => {
@@ -78,11 +78,11 @@ const buildInitialYears = (): number[] => {
 
 // ─── props ────────────────────────────────────────────────────────────────────
 interface Props {
-  visible   : boolean;
-  value     : Date | null;
-  title?    : string;
-  onSelect  : (date: Date) => void;
-  onClose   : () => void;
+  visible: boolean;
+  value: Date | null;
+  title?: string;
+  onSelect: (date: Date) => void;
+  onClose: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,13 +94,13 @@ export default function SmartCalendarModal({
   const seed = value ?? new Date();
 
   const [pendingDate, setPendingDate] = useState<Date | null>(value);  // what "Save" will commit
-  const [calYear,  setCalYear]  = useState(seed.getFullYear());
+  const [calYear, setCalYear] = useState(seed.getFullYear());
   const [calMonth, setCalMonth] = useState(seed.getMonth());
 
   const [showMonthDrop, setShowMonthDrop] = useState(false);
-  const [showYearDrop,  setShowYearDrop]  = useState(false);
+  const [showYearDrop, setShowYearDrop] = useState(false);
 
-  const [typeText,  setTypeText]  = useState(dateToStr(value));
+  const [typeText, setTypeText] = useState(dateToStr(value));
   const [typeError, setTypeError] = useState(false);
 
   // ── infinite year list ──────────────────────────────────────────────────────
@@ -282,7 +282,7 @@ export default function SmartCalendarModal({
 
   // ─── year FlatList item ──────────────────────────────────────────────────────
   const renderYearItem = useCallback(({ item: yr }: ListRenderItemInfo<number>) => {
-    const active    = yr === calYear;
+    const active = yr === calYear;
     const isCurrent = yr === THIS_YEAR;
     return (
       <TouchableOpacity
@@ -336,7 +336,7 @@ export default function SmartCalendarModal({
         }}
       >
         {/* Card – inner tap doesn't close */}
-        <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+        <TouchableOpacity activeOpacity={1} onPress={() => { }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 28, padding: 20, width: 320 }}>
 
             {/* ── Title row ── */}

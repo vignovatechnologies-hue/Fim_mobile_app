@@ -10,7 +10,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Animated
+  Animated,
+  StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -26,7 +27,7 @@ import {
   Sparkles as SparklesIcon,
   Bot as BotIcon,
   Send as SendIcon,
-  X as XIcon
+  X as XIcon,
 } from "lucide-react-native";
 
 const Bell = BellIcon as any;
@@ -75,68 +76,77 @@ type Emi = {
 
 type ChatMsg = { from: "you" | "fim"; text: string };
 
+// ── Colour tokens ──────────────────────────────────────────────
+const C = {
+  bg: "#f4f6f5",          // page background (light sage-grey)
+  surface: "#ffffff",
+  border: "#e4e9e7",
+  primary: "#0f4a3f",     // deep forest green
+  primaryMid: "#0f3a31",
+  accent: "#10b981",      // emerald green
+  muted: "#6b7a76",
+  mutedLighter: "#9eaaa6",
+  warning: "#d97706",
+  warningBg: "#fef3c7",
+  successBg: "#d1fae5",
+  success: "#059669",
+};
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return "Good morning";
+  if (h >= 12 && h < 17) return "Good afternoon";
+  if (h >= 17 && h < 21) return "Good evening";
+  return "Good night";
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const { user } = useAuth();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [upcoming, setUpcoming] = useState<Emi[]>([]);
   const [loading, setLoading] = useState(true);
-  const [greeting, setGreeting] = useState("Good morning");
   const [confirmModal, setConfirmModal] = useState(false);
 
-  // FIM Chat state
+  // FIM Chat
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const chatScrollRef = useRef<ScrollView>(null);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // Pulse animation for bot icon
+  // Pulse anim for bot button
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    const pulse = Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.15, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.12, duration: 950, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 950, useNativeDriver: true }),
       ])
     );
-    pulse.start();
-    return () => pulse.stop();
+    loop.start();
+    return () => loop.stop();
   }, []);
 
   const fetchData = async () => {
     try {
       const summaryData = await apiFetch<Summary>("/api/dashboard/summary");
       setSummary(summaryData);
-
       const loansData = await apiFetch<Emi[]>("/api/loans");
-      const unpaid = loansData.filter((l) => !l.paid).slice(0, 3);
-      setUpcoming(unpaid);
+      setUpcoming(loansData.filter((l) => !l.paid).slice(0, 3));
     } catch (err: any) {
-      console.log("Error loading dashboard:", err);
+      console.log("Dashboard error:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-
-    // Set greeting
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) {
-      setGreeting("Good morning");
-    } else if (hour >= 12 && hour < 17) {
-      setGreeting("Good afternoon");
-    } else {
-      setGreeting("Good evening");
-    }
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleSendChat = async () => {
     const q = chatInput.trim();
     if (!q || chatLoading) return;
-    setChatMsgs(m => [...m, { from: "you", text: q }]);
+    setChatMsgs((m) => [...m, { from: "you", text: q }]);
     setChatInput("");
     setChatLoading(true);
     setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -145,9 +155,9 @@ export default function Dashboard() {
         method: "POST",
         body: JSON.stringify({ text: q }),
       });
-      setChatMsgs(m => [...m, { from: "fim", text: res.text }]);
+      setChatMsgs((m) => [...m, { from: "fim", text: res.text }]);
     } catch {
-      setChatMsgs(m => [...m, { from: "fim", text: "Sorry, I'm having trouble right now. Please try again!" }]);
+      setChatMsgs((m) => [...m, { from: "fim", text: "Sorry, I'm having trouble right now. Try again!" }]);
     } finally {
       setChatLoading(false);
       setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -157,37 +167,35 @@ export default function Dashboard() {
   const handlePayAll = async () => {
     setConfirmModal(false);
     const totalAmount = upcoming.reduce((sum, l) => sum + l.emi, 0);
-    const unpaidLoanIds = upcoming.map((l) => l.id);
-
+    const unpaidIds = upcoming.map((l) => l.id);
     setLoading(true);
     try {
-      // Simulate payment flow directly
       const result = await apiFetch("/api/payments/verify-signature", {
         method: "POST",
         body: JSON.stringify({
           razorpay_order_id: `order_mock_${Date.now()}`,
           razorpay_payment_id: `mock_pay_${Date.now()}`,
           razorpay_signature: "mock_signature",
-          loan_ids: unpaidLoanIds,
+          loan_ids: unpaidIds,
           amount: totalAmount,
           is_mock: true,
         }),
       });
       Alert.alert(
         "Payment Successful",
-        `Payment of ₹${totalAmount.toLocaleString("en-IN")} processed! ${result.loans_paid?.length ?? unpaidLoanIds.length} EMI(s) marked paid.`
+        `₹${totalAmount.toLocaleString("en-IN")} processed! ${result.loans_paid?.length ?? unpaidIds.length} EMI(s) marked paid.`
       );
       fetchData();
     } catch (err: any) {
-      Alert.alert("Payment Failed", err.message || "Failed to make simulated payment");
+      Alert.alert("Payment Failed", err.message || "Failed to process payment");
       setLoading(false);
     }
   };
 
   if (loading || !summary) {
     return (
-      <View className="flex-grow justify-center items-center bg-[#f9fafb]">
-        <ActivityIndicator size="large" color="#0f4a3f" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: C.bg }}>
+        <ActivityIndicator size="large" color={C.primary} />
       </View>
     );
   }
@@ -198,281 +206,250 @@ export default function Dashboard() {
     {
       label: "Active Loans",
       value: summary.active_loans_count.toString(),
-      sub: `₹ ${(summary.outstanding_loans_amount / 100000).toFixed(1)}L outstanding`,
+      sub: `₹${(summary.outstanding_loans_amount / 100000).toFixed(1)}L outstanding`,
       icon: TrendingUp,
-      color: "bg-[#0f4a3f]/10 text-[#0f4a3f]",
-      action: () => router.push("/(tabs)/emis")
+      iconBg: "#dbeafe", iconColor: "#1d4ed8",
+      action: () => router.push("/(tabs)/emis"),
     },
     {
       label: "Health Score",
       value: summary.health_score.toString(),
       sub: "Good · improving",
       icon: Shield,
-      color: "bg-emerald-500/10 text-emerald-600",
-      action: () => router.push("/(tabs)/insights")
+      iconBg: C.successBg, iconColor: C.success,
+      action: () => router.push("/(tabs)/insights"),
     },
     {
       label: "Savings Goal",
       value: `${summary.savings_goal_percent}%`,
       sub: summary.savings_goal_text,
       icon: TrendingUp,
-      color: "bg-amber-500/10 text-amber-600",
-      action: () => router.push("/savings")
+      iconBg: "#fef3c7", iconColor: C.warning,
+      action: () => router.push("/savings"),
     },
     {
       label: "Next EMI",
       value: summary.next_emi_days,
       sub: summary.next_emi_name,
       icon: Calendar,
-      color: "bg-orange-500/10 text-orange-600",
-      action: () => router.push("/(tabs)/emis")
-    }
+      iconBg: "#fee2e2", iconColor: "#dc2626",
+      action: () => router.push("/(tabs)/emis"),
+    },
+  ];
+
+  const quickActions = [
+    { label: "Add Loan", icon: Plus, action: () => router.push("/(tabs)/emis") },
+    { label: "Log Expense", icon: ArrowUpRight, action: () => router.push("/(tabs)/expenses") },
+    { label: "Add Income", icon: ArrowDownRight, action: () => router.push("/income") },
+    { label: "Set Goal", icon: TrendingUp, action: () => router.push("/savings") },
   ];
 
   return (
-    <ScrollView className="flex-grow bg-[#f9fafb]">
-        {/* Header */}
-      <View className="px-5 pt-6 pb-3 flex-row items-center justify-between">
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/profile")}
-          className="flex-row items-center"
-        >
-          <View className="w-11 h-11 rounded-full bg-[#0f4a3f] justify-center items-center">
-            <Text className="text-white font-extrabold text-sm">{user?.initials || "FI"}</Text>
+    <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
+
+      {/* ── Header ── */}
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} style={s.headerLeft}>
+          <View style={s.avatar}>
+            <Text style={s.avatarText}>{user?.initials || "FI"}</Text>
           </View>
-          <View className="ml-3">
-            <Text className="text-xs text-[#7c8a87] font-semibold">{greeting}</Text>
-            <Text className="text-sm font-bold text-[#0f3a31]">{user?.name || "Guest"}</Text>
+          <View style={{ marginLeft: 12 }}>
+            <Text style={s.greetText}>{getGreeting()}</Text>
+            <Text style={s.nameText}>{user?.name || "Guest"}</Text>
           </View>
         </TouchableOpacity>
 
-        {/* Right header icons: Bot + Bell */}
-        <View className="flex-row items-center gap-2">
-          {/* FIM Chatbot Icon */}
+        <View style={s.headerRight}>
+          {/* FIM Bot */}
           <AnimatedView style={{ transform: [{ scale: pulseAnim }] }}>
-            <TouchableOpacity
-              onPress={() => setChatOpen(true)}
-              className="relative p-2.5 rounded-full bg-[#0f3a31] border border-[#0f4a3f]"
-              style={{ shadowColor: "#10b981", shadowOpacity: 0.5, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }}
-            >
-              <Bot size={18} color="#10b981" />
-              <View className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white" />
+            <TouchableOpacity onPress={() => setChatOpen(true)} style={s.botBtn}>
+              <Bot size={18} color={C.accent} />
+              <View style={s.botDot} />
             </TouchableOpacity>
           </AnimatedView>
 
-          {/* Bell Icon */}
+          {/* Bell */}
           <TouchableOpacity
             onPress={() => Alert.alert("Alerts", `${upcoming.length} EMIs due soon.`)}
-            className="relative p-2.5 rounded-full bg-white border border-[#e5e7eb]"
+            style={s.bellBtn}
           >
-            <Bell size={18} color="#0f3a31" />
-            {upcoming.length > 0 && (
-              <View className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
-            )}
+            <Bell size={18} color={C.primary} />
+            {upcoming.length > 0 && <View style={s.bellDot} />}
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Balance Card */}
-      <View className="px-5 mt-3">
-        <View className="bg-[#0f4a3f] rounded-3xl p-6 relative overflow-hidden shadow-lg">
-          <Text className="text-xs uppercase tracking-wider text-white/70 font-bold">Net Balance this month</Text>
-          <Text className="text-3xl font-extrabold text-white mt-1">₹ {summary.net_balance.toLocaleString("en-IN")}</Text>
-          <View className="mt-5 flex-row space-x-3">
-            <TouchableOpacity
-              onPress={() => router.push("/income")}
-              className="flex-grow flex-1 bg-white/10 rounded-2xl p-3"
-            >
-              <View className="flex-row items-center text-white/80">
-                <ArrowDownRight className="w-3.5 h-3.5 text-white/80 mr-1" />
-                <Text className="text-xs text-white/80 font-bold">Income</Text>
+      {/* ── Balance Card ── */}
+      <View style={s.px}>
+        <View style={s.balanceCard}>
+          {/* decorative circles */}
+          <View style={s.deco1} />
+          <View style={s.deco2} />
+
+          <Text style={s.balanceLabel}>Net Balance this month</Text>
+          <Text style={s.balanceAmount}>₹ {summary.net_balance.toLocaleString("en-IN")}</Text>
+
+          <View style={s.balanceRow}>
+            <TouchableOpacity onPress={() => router.push("/income")} style={s.balanceChip}>
+              <View style={s.balanceChipLabel}>
+                <ArrowDownRight size={13} color="rgba(255,255,255,0.8)" />
+                <Text style={s.balanceChipLabelTxt}>Income</Text>
               </View>
-              <Text className="font-bold text-white mt-1 text-sm">₹ {summary.income.toLocaleString("en-IN")}</Text>
+              <Text style={s.balanceChipAmt}>₹ {summary.income.toLocaleString("en-IN")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push("/expenses")}
-              className="flex-grow flex-1 bg-white/10 rounded-2xl p-3"
-            >
-              <View className="flex-row items-center text-white/80">
-                <ArrowUpRight className="w-3.5 h-3.5 text-white/80 mr-1" />
-                <Text className="text-xs text-white/80 font-bold">Spent</Text>
+
+            <TouchableOpacity onPress={() => router.push("/(tabs)/expenses")} style={s.balanceChip}>
+              <View style={s.balanceChipLabel}>
+                <ArrowUpRight size={13} color="rgba(255,255,255,0.8)" />
+                <Text style={s.balanceChipLabelTxt}>Spent</Text>
               </View>
-              <Text className="font-bold text-white mt-1 text-sm">₹ {summary.spent.toLocaleString("en-IN")}</Text>
+              <Text style={s.balanceChipAmt}>₹ {summary.spent.toLocaleString("en-IN")}</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* Smart Pay Action */}
-      <View className="px-5 mt-4">
+      {/* ── Smart Pay CTA ── */}
+      <View style={[s.px, { marginTop: 14 }]}>
         <TouchableOpacity
-          onPress={() => {
-            if (upcoming.length === 0) {
-              Alert.alert("On Track", "All EMIs paid for this cycle ✓");
-            } else {
-              setConfirmModal(true);
-            }
-          }}
-          className="bg-white border border-[#e5e7eb] rounded-3xl p-4 flex-row items-center shadow-sm"
+          onPress={() => upcoming.length === 0
+            ? Alert.alert("On Track", "All EMIs paid for this cycle ✓")
+            : setConfirmModal(true)
+          }
+          style={s.smartPayBtn}
+          activeOpacity={0.82}
         >
-          <View className="w-12 h-12 rounded-2xl bg-amber-100 justify-center items-center mr-4">
-            <Zap className="w-6 h-6 text-amber-600" />
+          <View style={s.smartPayIcon}>
+            <Zap size={22} color={C.warning} fill={C.warning} />
           </View>
-          <View className="flex-grow">
-            <Text className="text-sm font-bold text-[#0f3a31]">
+          <View style={{ flex: 1 }}>
+            <Text style={s.smartPayTitle}>
               {upcoming.length === 0 ? "All EMIs paid this month" : `Smart Pay ${upcoming.length} EMIs`}
             </Text>
-            <Text className="text-xs text-[#7c8a87] mt-0.5">
+            <Text style={s.smartPaySub}>
               {upcoming.length === 0
                 ? "Next due in 30 days"
-                : `One tap. ₹ ${totalUnpaidEmi.toLocaleString("en-IN")} due soon`}
+                : `One tap · ₹${totalUnpaidEmi.toLocaleString("en-IN")} due soon`}
             </Text>
           </View>
-          <ChevronRight className="w-5 h-5 text-[#7c8a87]" />
+          <ChevronRight size={18} color={C.mutedLighter} />
         </TouchableOpacity>
       </View>
 
-      {/* Statistics Cards */}
-      <View className="px-5 mt-5 flex-row flex-wrap justify-between">
-        {statCards.map((card, idx) => (
-          <TouchableOpacity
-            key={idx}
-            onPress={card.action}
-            className="w-[48%] bg-white border border-[#e5e7eb] rounded-2xl p-4 mb-3 shadow-sm"
-          >
-            <View className={`w-9 h-9 rounded-xl justify-center items-center ${card.color}`}>
-              <card.icon size={18} color="currentColor" />
+      {/* ── Stat Cards ── */}
+      <View style={[s.px, s.statsGrid]}>
+        {statCards.map((card, i) => (
+          <TouchableOpacity key={i} onPress={card.action} style={s.statCard} activeOpacity={0.82}>
+            <View style={[s.statIconWrap, { backgroundColor: card.iconBg }]}>
+              <card.icon size={16} color={card.iconColor} />
             </View>
-            <Text className="text-xl font-extrabold text-[#0f3a31] mt-3">{card.value}</Text>
-            <Text className="text-[10px] text-[#7c8a87] font-bold mt-0.5">{card.label}</Text>
-            <Text className="text-[9px] text-[#9ca3af] mt-0.5" numberOfLines={1}>{card.sub}</Text>
+            <Text style={s.statValue}>{card.value}</Text>
+            <Text style={s.statLabel}>{card.label}</Text>
+            <Text style={s.statSub} numberOfLines={1}>{card.sub}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Upcoming EMIs */}
-      <View className="px-5 mt-4">
-        <View className="flex-row items-center justify-between mb-3">
-          <Text className="font-bold text-sm text-[#0f3a31]">Upcoming EMIs</Text>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/emis")}>
-            <Text className="text-xs font-semibold text-[#10b981]">See all</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View className="space-y-2.5">
-          {upcoming.length === 0 ? (
-            <View className="items-center justify-center bg-white border border-[#e5e7eb] rounded-3xl p-6">
-              <Text className="text-2xl">🎉</Text>
-              <Text className="text-xs text-[#7c8a87] mt-1 font-bold">All EMIs paid for this month!</Text>
-            </View>
-          ) : (
-            upcoming.map((e) => (
-              <TouchableOpacity
-                key={e.id}
-                onPress={() => router.push("/(tabs)/emis")}
-                className="flex-row items-center bg-white border border-[#e5e7eb] rounded-2xl p-3.5 mb-2"
-              >
-                <View className="w-11 h-11 rounded-xl bg-gray-100 justify-center items-center">
-                  <Text className="text-lg">{e.logo}</Text>
-                </View>
-                <View className="ml-3 flex-grow">
-                  <Text className="font-bold text-sm text-[#0f3a31]">{e.name}</Text>
-                  <Text className="text-xs text-[#7c8a87] mt-0.5">Due {e.due} of this month</Text>
-                </View>
-                <View className="items-end">
-                  <Text className="font-bold text-sm text-[#0f3a31]">₹{e.emi.toLocaleString("en-IN")}</Text>
-                  <Text className="text-[10px] text-emerald-500 font-bold mt-0.5">On track</Text>
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-      </View>
-
-      {/* AI Insight Teaser */}
-      <View className="px-5 mt-4">
-        <View className="bg-[#0f3a31] rounded-3xl p-5 relative overflow-hidden">
-          <View className="flex-row items-center bg-white/10 self-start px-2.5 py-1 rounded-full">
-            <Sparkles size={10} color="#10b981" className="mr-1" />
-            <Text className="text-[9px] font-bold text-white uppercase tracking-wider">AI Insight</Text>
-          </View>
-          <Text className="text-white text-base font-bold mt-3 leading-snug">
-            You can save ₹14,200/yr by refinancing your personal loan.
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.push("/(tabs)/insights")}
-            className="mt-4 bg-white rounded-full py-2 px-4 self-start"
-          >
-            <Text className="text-[#0f3a31] text-xs font-bold">Show me how →</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Quick Actions */}
-      <View className="px-5 mt-6 mb-8">
-        <Text className="font-bold text-sm text-[#0f3a31] mb-3">Quick actions</Text>
-        <View className="flex-row justify-between">
-          {[
-            { label: "Add Loan", icon: Plus, action: () => router.push("/(tabs)/emis") },
-            { label: "Log Spent", icon: ArrowUpRight, action: () => router.push("/expenses") },
-            { label: "Add Income", icon: ArrowDownRight, action: () => router.push("/income") },
-            { label: "Set Goal", icon: TrendingUp, action: () => router.push("/savings") }
-          ].map((action, idx) => (
-            <TouchableOpacity
-              key={idx}
-              onPress={action.action}
-              className="items-center"
-            >
-              <View className="w-12 h-12 rounded-2xl bg-white border border-[#e5e7eb] justify-center items-center mb-1">
-                <action.icon size={20} color="#0f4a3f" />
+      {/* ── Quick Actions ── */}
+      <View style={[s.px, { marginTop: 20 }]}>
+        <Text style={s.sectionTitle}>Quick actions</Text>
+        <View style={s.quickRow}>
+          {quickActions.map((a, i) => (
+            <TouchableOpacity key={i} onPress={a.action} style={s.quickAction} activeOpacity={0.8}>
+              <View style={s.quickIconWrap}>
+                <a.icon size={20} color={C.primary} />
               </View>
-              <Text className="text-[10px] font-semibold text-[#7c8a87] text-center">{action.label}</Text>
+              <Text style={s.quickLabel}>{a.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      {/* ═══════ FIM Chat Modal ═══════ */}
-      <Modal
-        visible={chatOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setChatOpen(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-        >
-          <View style={{ flex: 1 }} className="justify-end">
-            {/* Backdrop */}
+      {/* ── Upcoming EMIs ── */}
+      <View style={[s.px, { marginTop: 22 }]}>
+        <View style={s.sectionRow}>
+          <Text style={s.sectionTitle}>Upcoming EMIs</Text>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/emis")}>
+            <Text style={s.seeAll}>See all</Text>
+          </TouchableOpacity>
+        </View>
+
+        {upcoming.length === 0 ? (
+          <View style={s.emptyEmi}>
+            <Text style={{ fontSize: 26 }}>🎉</Text>
+            <Text style={s.emptyEmiText}>All EMIs paid for this month!</Text>
+          </View>
+        ) : (
+          upcoming.map((e) => (
             <TouchableOpacity
-              style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)" }}
+              key={e.id}
+              onPress={() => router.push("/(tabs)/emis")}
+              style={s.emiRow}
+              activeOpacity={0.82}
+            >
+              <View style={s.emiLogo}>
+                <Text style={{ fontSize: 20 }}>{e.logo}</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={s.emiName}>{e.name}</Text>
+                <Text style={s.emiDue}>Due {e.due} of this month</Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={s.emiAmt}>₹{e.emi.toLocaleString("en-IN")}</Text>
+                <Text style={s.emiStatus}>On track</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
+      </View>
+
+      {/* ── AI Insight Teaser ── */}
+      <View style={[s.px, { marginTop: 22 }]}>
+        <View style={s.insightCard}>
+          <View style={s.insightBadge}>
+            <Sparkles size={10} color={C.accent} />
+            <Text style={s.insightBadgeTxt}>AI INSIGHT</Text>
+          </View>
+          <Text style={s.insightBody}>
+            You can save ₹14,200/yr by refinancing your personal loan.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/insights")}
+            style={s.insightBtn}
+            activeOpacity={0.85}
+          >
+            <Text style={s.insightBtnTxt}>Show me how →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={{ height: 36 }} />
+
+      {/* ════════ FIM Chat Modal ════════ */}
+      <Modal visible={chatOpen} transparent animationType="slide" onRequestClose={() => setChatOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <View style={{ flex: 1, justifyContent: "flex-end" }}>
+            <TouchableOpacity
+              style={StyleSheet.absoluteFillObject}
               onPress={() => setChatOpen(false)}
               activeOpacity={1}
-            />
+            >
+              <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
+            </TouchableOpacity>
 
-            {/* Chat Sheet */}
-            <View className="bg-[#0b2d25] rounded-t-3xl" style={{ maxHeight: "80%", minHeight: 420 }}>
-              {/* Handle bar */}
-              <View className="items-center pt-3 pb-1">
-                <View className="w-10 h-1 rounded-full bg-white/20" />
-              </View>
+            <View style={s.chatSheet}>
+              <View style={s.chatHandle} />
 
-              {/* Header */}
-              <View className="flex-row items-center px-5 py-3 border-b border-white/10">
-                <View className="w-10 h-10 rounded-full bg-emerald-900 justify-center items-center mr-3"
-                  style={{ shadowColor: "#10b981", shadowOpacity: 0.6, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }}
-                >
-                  <Bot size={20} color="#10b981" />
+              {/* Chat header */}
+              <View style={s.chatHeader}>
+                <View style={s.chatAvatarWrap}>
+                  <Bot size={20} color={C.accent} />
                 </View>
-                <View className="flex-1">
-                  <Text className="text-white font-bold text-sm">Ask FIM</Text>
-                  <Text className="text-emerald-400 text-[10px] font-semibold">● Gemini 2.5 Flash · Online</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.chatTitle}>Ask FIM</Text>
+                  <Text style={s.chatOnline}>● Gemini 2.5 Flash · Online</Text>
                 </View>
-                <TouchableOpacity
-                  onPress={() => setChatOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/10 justify-center items-center"
-                >
+                <TouchableOpacity onPress={() => setChatOpen(false)} style={s.chatClose}>
                   <XClose size={16} color="#ffffff" />
                 </TouchableOpacity>
               </View>
@@ -480,74 +457,66 @@ export default function Dashboard() {
               {/* Messages */}
               <ScrollView
                 ref={chatScrollRef}
-                className="flex-1 px-4 pt-4"
-                contentContainerStyle={{ flexGrow: 1, paddingBottom: 8 }}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}
                 keyboardShouldPersistTaps="handled"
               >
                 {chatMsgs.length === 0 && (
-                  <View className="items-center mt-6">
-                    <View className="w-16 h-16 rounded-full bg-emerald-900/60 justify-center items-center mb-3"
-                      style={{ shadowColor: "#10b981", shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 0 } }}
-                    >
-                      <Bot size={32} color="#10b981" />
+                  <View style={{ alignItems: "center", marginTop: 24 }}>
+                    <View style={s.chatEmptyIcon}>
+                      <Bot size={32} color={C.accent} />
                     </View>
-                    <Text className="text-white font-bold text-base">Hi, I'm FIM! 👋</Text>
-                    <Text className="text-white/60 text-xs mt-1 text-center px-8">
-                      Your personal AI financial advisor. Ask me anything about your money.
-                    </Text>
-                    <View className="mt-5 w-full gap-2">
-                      {["Can I afford a car loan?", "How much am I saving?", "Which loan to prepay first?"].map((s, i) => (
-                        <TouchableOpacity
-                          key={i}
-                          onPress={() => { setChatInput(s); }}
-                          className="bg-white/10 rounded-2xl px-4 py-2.5"
-                        >
-                          <Text className="text-white/80 text-xs font-semibold">{s}</Text>
+                    <Text style={s.chatEmptyTitle}>Hi, I'm FIM! 👋</Text>
+                    <Text style={s.chatEmptyBody}>Your personal AI financial advisor. Ask me anything about your money.</Text>
+                    <View style={{ marginTop: 20, width: "100%", gap: 8 }}>
+                      {["Can I afford a car loan?", "How much am I saving?", "Which loan to prepay first?"].map((s_, i) => (
+                        <TouchableOpacity key={i} onPress={() => setChatInput(s_)} style={s.chatSuggestion}>
+                          <Text style={s.chatSuggestionTxt}>{s_}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
                 )}
+
                 {chatMsgs.map((m, i) => (
                   <View
                     key={i}
-                    className={`rounded-2xl px-3.5 py-2.5 mb-2 max-w-[85%] ${
-                      m.from === "you"
-                        ? "bg-emerald-700 self-end"
-                        : "bg-white/10 self-start"
-                    }`}
+                    style={[
+                      s.bubble,
+                      m.from === "you" ? s.bubbleYou : s.bubbleFim,
+                    ]}
                   >
-                    <Text className="text-white text-xs leading-relaxed font-semibold">{m.text}</Text>
+                    <Text style={s.bubbleTxt}>{m.text}</Text>
                   </View>
                 ))}
+
                 {chatLoading && (
-                  <View className="bg-white/10 self-start rounded-2xl px-4 py-3 mb-2">
-                    <View className="flex-row gap-1.5">
-                      <View className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ opacity: 0.6 }} />
-                      <View className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ opacity: 0.8 }} />
-                      <View className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <View style={[s.bubble, s.bubbleFim]}>
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      {[0, 1, 2].map((i) => (
+                        <View key={i} style={s.typingDot} />
+                      ))}
                     </View>
                   </View>
                 )}
               </ScrollView>
 
               {/* Input */}
-              <View className="flex-row items-center px-4 pb-6 pt-3 border-t border-white/10">
+              <View style={s.chatInputRow}>
                 <TextInput
                   value={chatInput}
                   onChangeText={setChatInput}
                   editable={!chatLoading}
                   placeholder="Ask anything about your money…"
                   placeholderTextColor="rgba(255,255,255,0.35)"
-                  className="flex-1 bg-white/10 rounded-2xl px-4 py-3 text-white text-xs mr-2"
+                  style={s.chatInput}
                   onSubmitEditing={handleSendChat}
                   returnKeyType="send"
                 />
                 <TouchableOpacity
                   onPress={handleSendChat}
                   disabled={chatLoading || !chatInput.trim()}
-                  className="w-11 h-11 rounded-2xl bg-emerald-500 justify-center items-center"
-                  style={{ opacity: chatLoading || !chatInput.trim() ? 0.5 : 1 }}
+                  style={[s.chatSendBtn, { opacity: chatLoading || !chatInput.trim() ? 0.45 : 1 }]}
                 >
                   <Send size={16} color="#ffffff" />
                 </TouchableOpacity>
@@ -557,31 +526,20 @@ export default function Dashboard() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Confirm Payment Modal */}
-      <Modal
-        visible={confirmModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmModal(false)}
-      >
-        <View className="flex-1 justify-center items-center bg-black/50 px-6">
-          <View className="bg-white rounded-3xl p-6 w-full max-w-sm">
-            <Text className="text-lg font-bold text-[#0f3a31] mb-2">Smart Pay {upcoming.length} EMIs?</Text>
-            <Text className="text-sm text-[#7c8a87] mb-6">
-              ₹ {totalUnpaidEmi.toLocaleString("en-IN")} will be debited from your primary bank account.
+      {/* ════════ Confirm Payment Modal ════════ */}
+      <Modal visible={confirmModal} transparent animationType="fade" onRequestClose={() => setConfirmModal(false)}>
+        <View style={s.confirmOverlay}>
+          <View style={s.confirmCard}>
+            <Text style={s.confirmTitle}>Smart Pay {upcoming.length} EMIs?</Text>
+            <Text style={s.confirmBody}>
+              ₹{totalUnpaidEmi.toLocaleString("en-IN")} will be debited from your primary bank account.
             </Text>
-            <View className="flex-row space-x-3 justify-end">
-              <TouchableOpacity
-                onPress={() => setConfirmModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-gray-100"
-              >
-                <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+            <View style={s.confirmBtns}>
+              <TouchableOpacity onPress={() => setConfirmModal(false)} style={s.confirmCancel}>
+                <Text style={s.confirmCancelTxt}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handlePayAll}
-                className="px-4 py-2.5 rounded-xl bg-[#0f4a3f]"
-              >
-                <Text className="text-xs font-bold text-white">Pay ₹ {totalUnpaidEmi.toLocaleString("en-IN")}</Text>
+              <TouchableOpacity onPress={handlePayAll} style={s.confirmPay}>
+                <Text style={s.confirmPayTxt}>Pay ₹{totalUnpaidEmi.toLocaleString("en-IN")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -590,3 +548,215 @@ export default function Dashboard() {
     </ScrollView>
   );
 }
+
+// ── Styles ────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  page: { flex: 1, backgroundColor: C.bg },
+  px: { paddingHorizontal: 20 },
+
+  // Header
+  header: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingTop: 24, paddingBottom: 12,
+  },
+  headerLeft: { flexDirection: "row", alignItems: "center" },
+  avatar: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: C.primary, justifyContent: "center", alignItems: "center",
+  },
+  avatarText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  greetText: { fontSize: 11, color: C.muted, fontWeight: "600" },
+  nameText: { fontSize: 15, fontWeight: "800", color: C.primaryMid },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  botBtn: {
+    padding: 10, borderRadius: 22,
+    backgroundColor: C.primaryMid, borderWidth: 1, borderColor: C.primary,
+  },
+  botDot: {
+    position: "absolute", top: -2, right: -2,
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: C.accent, borderWidth: 2, borderColor: C.bg,
+  },
+  bellBtn: {
+    padding: 10, borderRadius: 22,
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+  },
+  bellDot: {
+    position: "absolute", top: 8, right: 8,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: "#ef4444",
+  },
+
+  // Balance card
+  balanceCard: {
+    backgroundColor: C.primary, borderRadius: 28, padding: 24,
+    overflow: "hidden", position: "relative",
+    shadowColor: C.primary, shadowOpacity: 0.35, shadowRadius: 20, shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  deco1: {
+    position: "absolute", top: -50, right: -50,
+    width: 160, height: 160, borderRadius: 80,
+    backgroundColor: "rgba(16,185,129,0.15)",
+  },
+  deco2: {
+    position: "absolute", bottom: -60, left: -30,
+    width: 160, height: 160, borderRadius: 80,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  balanceLabel: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
+  balanceAmount: { fontSize: 36, fontWeight: "800", color: "#ffffff", marginTop: 4 },
+  balanceRow: { flexDirection: "row", gap: 12, marginTop: 20 },
+  balanceChip: { flex: 1, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, padding: 14 },
+  balanceChipLabel: { flexDirection: "row", alignItems: "center", gap: 4 },
+  balanceChipLabelTxt: { fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: "700" },
+  balanceChipAmt: { fontSize: 15, fontWeight: "700", color: "#ffffff", marginTop: 6 },
+
+  // Smart Pay
+  smartPayBtn: {
+    backgroundColor: C.surface, borderRadius: 24, padding: 16,
+    flexDirection: "row", alignItems: "center", gap: 14,
+    borderWidth: 1, borderColor: C.border,
+    shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  smartPayIcon: {
+    width: 50, height: 50, borderRadius: 16,
+    backgroundColor: C.warningBg, justifyContent: "center", alignItems: "center",
+  },
+  smartPayTitle: { fontSize: 14, fontWeight: "800", color: C.primaryMid },
+  smartPaySub: { fontSize: 12, color: C.muted, marginTop: 2 },
+
+  // Stat cards
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: 18, gap: 12 },
+  statCard: {
+    width: "47.5%", backgroundColor: C.surface, borderRadius: 20, padding: 16,
+    borderWidth: 1, borderColor: C.border,
+    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  statIconWrap: { width: 38, height: 38, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  statValue: { fontSize: 26, fontWeight: "800", color: C.primaryMid, marginTop: 12 },
+  statLabel: { fontSize: 11, color: C.muted, fontWeight: "700", marginTop: 2 },
+  statSub: { fontSize: 10, color: C.mutedLighter, marginTop: 2 },
+
+  // Quick actions
+  sectionTitle: { fontSize: 14, fontWeight: "800", color: C.primaryMid, marginBottom: 14 },
+  sectionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  seeAll: { fontSize: 12, fontWeight: "700", color: C.accent },
+  quickRow: { flexDirection: "row", justifyContent: "space-between" },
+  quickAction: { alignItems: "center" },
+  quickIconWrap: {
+    width: 52, height: 52, borderRadius: 18,
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+    justifyContent: "center", alignItems: "center", marginBottom: 6,
+    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  quickLabel: { fontSize: 10, fontWeight: "600", color: C.muted, textAlign: "center" },
+
+  // EMI rows
+  emptyEmi: {
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+    borderRadius: 24, paddingVertical: 24,
+  },
+  emptyEmiText: { fontSize: 12, color: C.muted, fontWeight: "700", marginTop: 6 },
+  emiRow: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+    borderRadius: 20, padding: 14, marginBottom: 10,
+    shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  emiLogo: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#f3f4f6", justifyContent: "center", alignItems: "center" },
+  emiName: { fontSize: 14, fontWeight: "700", color: C.primaryMid },
+  emiDue: { fontSize: 11, color: C.muted, marginTop: 2 },
+  emiAmt: { fontSize: 14, fontWeight: "800", color: C.primaryMid },
+  emiStatus: { fontSize: 10, fontWeight: "700", color: C.success, marginTop: 2 },
+
+  // Insight card
+  insightCard: {
+    backgroundColor: C.primaryMid, borderRadius: 24, padding: 22, overflow: "hidden",
+  },
+  insightBadge: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "rgba(255,255,255,0.12)", alignSelf: "flex-start",
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, marginBottom: 14,
+  },
+  insightBadgeTxt: { fontSize: 9, fontWeight: "800", color: "#ffffff", letterSpacing: 1.2 },
+  insightBody: { fontSize: 16, fontWeight: "700", color: "#ffffff", lineHeight: 24 },
+  insightBtn: {
+    marginTop: 16, backgroundColor: "#ffffff", alignSelf: "flex-start",
+    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 50,
+  },
+  insightBtnTxt: { fontSize: 12, fontWeight: "800", color: C.primaryMid },
+
+  // Chat modal
+  chatSheet: {
+    backgroundColor: "#0b2d25", borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    maxHeight: "82%", minHeight: 420,
+  },
+  chatHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.2)", alignSelf: "center", marginTop: 12, marginBottom: 4,
+  },
+  chatHeader: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  chatAvatarWrap: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "#134d3a", justifyContent: "center", alignItems: "center", marginRight: 12,
+  },
+  chatTitle: { fontSize: 14, fontWeight: "700", color: "#ffffff" },
+  chatOnline: { fontSize: 10, color: C.accent, fontWeight: "600", marginTop: 1 },
+  chatClose: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.1)", justifyContent: "center", alignItems: "center",
+  },
+  chatEmptyIcon: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: "rgba(16,185,129,0.15)", justifyContent: "center", alignItems: "center", marginBottom: 12,
+  },
+  chatEmptyTitle: { fontSize: 16, fontWeight: "700", color: "#ffffff" },
+  chatEmptyBody: { fontSize: 12, color: "rgba(255,255,255,0.6)", textAlign: "center", marginTop: 6, paddingHorizontal: 24 },
+  chatSuggestion: {
+    backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 16,
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  chatSuggestionTxt: { fontSize: 12, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
+  bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8, maxWidth: "85%" },
+  bubbleYou: { backgroundColor: "#0d5c3e", alignSelf: "flex-end" },
+  bubbleFim: { backgroundColor: "rgba(255,255,255,0.1)", alignSelf: "flex-start" },
+  bubbleTxt: { fontSize: 13, color: "#ffffff", lineHeight: 20, fontWeight: "500" },
+  typingDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.accent, opacity: 0.8 },
+  chatInputRow: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 16, paddingBottom: Platform.OS === "ios" ? 32 : 20, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)", gap: 10,
+  },
+  chatInput: {
+    flex: 1, backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 12,
+    color: "#ffffff", fontSize: 13,
+  },
+  chatSendBtn: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: C.accent, justifyContent: "center", alignItems: "center",
+  },
+
+  // Confirm modal
+  confirmOverlay: {
+    flex: 1, justifyContent: "center", alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 24,
+  },
+  confirmCard: { backgroundColor: "#ffffff", borderRadius: 28, padding: 24, width: "100%" },
+  confirmTitle: { fontSize: 18, fontWeight: "800", color: C.primaryMid, marginBottom: 8 },
+  confirmBody: { fontSize: 14, color: C.muted, lineHeight: 20, marginBottom: 24 },
+  confirmBtns: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
+  confirmCancel: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 14, backgroundColor: "#f3f4f6" },
+  confirmCancelTxt: { fontSize: 13, fontWeight: "700", color: C.muted },
+  confirmPay: { paddingHorizontal: 18, paddingVertical: 10, borderRadius: 14, backgroundColor: C.primary },
+  confirmPayTxt: { fontSize: 13, fontWeight: "700", color: "#ffffff" },
+});

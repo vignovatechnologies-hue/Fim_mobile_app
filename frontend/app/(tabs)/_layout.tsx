@@ -1,108 +1,117 @@
-import { Tabs } from "expo-router";
-import { Home as HomeIcon, Wallet as WalletIcon, TrendingUp as TrendingUpIcon, Sparkles as SparklesIcon, User as UserIcon } from "lucide-react-native";
-import React from "react";
+import { useEffect } from "react";
+import { Slot, useRouter, useSegments } from "expo-router";
+import { useAuth } from "../../lib/auth";
+import { ActivityIndicator, View, Platform } from "react-native";
+import "../../global.css";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import { apiFetch } from "../../lib/api";
 
-const Home = HomeIcon as any;
-const Wallet = WalletIcon as any;
-const TrendingUp = TrendingUpIcon as any;
-const Sparkles = SparklesIcon as any;
-const User = UserIcon as any;
-import { View, Platform } from "react-native";
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  } as any),
+});
 
-export default function TabsLayout() {
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: "#10b981",
-        tabBarInactiveTintColor: "#7c8a87",
-        tabBarStyle: {
-          backgroundColor: "#0d1512",
-          borderTopWidth: 1,
-          borderTopColor: "#1a2c26",
-          paddingBottom: Platform.OS === "ios" ? 24 : 10,
-          paddingTop: 8,
-          height: Platform.OS === "ios" ? 88 : 68,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "bold",
-          marginTop: 2,
-        },
-        headerStyle: {
-          backgroundColor: "#0d1512",
-          borderBottomWidth: 1,
-          borderBottomColor: "#1a2c26",
-          elevation: 0,
-          shadowOpacity: 0,
-        },
-        headerTitleStyle: {
-          color: "#ffffff",
-          fontSize: 18,
-          fontWeight: "bold",
-        },
-        headerTintColor: "#ffffff",
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          headerTitle: "Smart EMI",
-          tabBarIcon: ({ color, size, focused }: any) => (
-            <View className={`p-2 rounded-xl ${focused ? "bg-[#10b981]/15" : ""}`}>
-              <Home color={color} size={20} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="emis"
-        options={{
-          title: "EMIs",
-          headerTitle: "Manage EMIs",
-          tabBarIcon: ({ color, size, focused }: any) => (
-            <View className={`p-2 rounded-xl ${focused ? "bg-[#10b981]/15" : ""}`}>
-              <Wallet color={color} size={20} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="expenses"
-        options={{
-          title: "Money",
-          headerTitle: "Expenses Logger",
-          tabBarIcon: ({ color, size, focused }: any) => (
-            <View className={`p-2 rounded-xl ${focused ? "bg-[#10b981]/15" : ""}`}>
-              <TrendingUp color={color} size={20} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="insights"
-        options={{
-          title: "Insights",
-          headerTitle: "AI Financial Insights",
-          tabBarIcon: ({ color, size, focused }: any) => (
-            <View className={`p-2 rounded-xl ${focused ? "bg-[#10b981]/15" : ""}`}>
-              <Sparkles color={color} size={20} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          headerTitle: "My Profile & Banks",
-          tabBarIcon: ({ color, size, focused }: any) => (
-            <View className={`p-2 rounded-xl ${focused ? "bg-[#10b981]/15" : ""}`}>
-              <User color={color} size={20} strokeWidth={focused ? 2.5 : 2} />
-            </View>
-          ),
-        }}
-      />
-    </Tabs>
-  );
+function RootLayoutNav() {
+  const { user, ready } = useAuth();
+  const segments = useSegments() as string[];
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!ready) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+    const isPublicRoute = segments[0] === "privacy-policy" || segments[0] === "terms-of-use";
+    
+    if (!user) {
+      if (!inAuthGroup && !isPublicRoute) {
+        router.replace("/(auth)/auth");
+      }
+    } else if (!user.verified) {
+      if (segments[1] !== "verify" && !isPublicRoute) {
+        router.replace("/(auth)/verify");
+      }
+    } else {
+      if (inAuthGroup) {
+        router.replace("/(tabs)");
+      }
+    }
+  }, [user, ready, segments]);
+
+  useEffect(() => {
+    if (user && user.verified) {
+      registerAndUploadToken();
+    }
+  }, [user]);
+
+  async function registerAndUploadToken() {
+    try {
+      const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+      if (isExpoGo) {
+        console.log("Running in Expo Go: Skipping remote notification token setup.");
+        await apiFetch("/api/user/fcm-token", {
+          method: "POST",
+          body: JSON.stringify({ fcm_token: `mock_expogo_token_${user?.id}_${Platform.OS}` }),
+        });
+        return;
+      }
+
+      let token = null;
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#6366f1',
+        });
+      }
+
+      if (Device.isDevice) {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus === 'granted') {
+          try {
+            token = (await Notifications.getDevicePushTokenAsync()).data;
+          } catch (e) {
+            console.log("Could not get device push token. Using mock simulator token.", e);
+            token = `mock_device_token_${user?.id}_${Platform.OS}`;
+          }
+        }
+      } else {
+        token = `mock_simulator_token_${user?.id}_${Platform.OS}`;
+      }
+
+      if (token) {
+        console.log("FCM/Device Push Token retrieved:", token);
+        await apiFetch("/api/user/fcm-token", {
+          method: "POST",
+          body: JSON.stringify({ fcm_token: token }),
+        });
+      }
+    } catch (error) {
+      console.log("Error in registerAndUploadToken:", error);
+    }
+  }
+
+  if (!ready) {
+    return (
+      <View className="flex-1 justify-center items-center bg-[#0d1512]">
+        <ActivityIndicator size="large" color="#10b981" />
+      </View>
+    );
+  }
+
+  return <Slot />;
+}
+
+export default function RootLayout() {
+  return <RootLayoutNav />;
 }

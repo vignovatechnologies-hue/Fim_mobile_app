@@ -7,7 +7,11 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  Modal
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -67,6 +71,8 @@ export default function ExpensesPage() {
   const [formAmount, setFormAmount] = useState("");
   const [formCat, setFormCat] = useState("Food");
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [budgetDraft, setBudgetDraft] = useState<Record<string, string>>({});
 
   const fetchData = async () => {
     try {
@@ -117,6 +123,18 @@ export default function ExpensesPage() {
       Alert.alert("Error", err.message || "Failed to log expense");
       setLoading(false);
     }
+  };
+
+  const handleSaveBudgets = () => {
+    setCats((prev) =>
+      prev.map((c) => ({
+        ...c,
+        budget: budgetDraft[c.name] ? Number(budgetDraft[c.name]) : c.budget,
+      }))
+    );
+    setBudgetModalOpen(false);
+    setBudgetDraft({});
+    Alert.alert("Saved", "Monthly budgets updated!");
   };
 
   const totalSpent = cats.reduce((s, c) => s + c.spent, 0);
@@ -253,6 +271,43 @@ export default function ExpensesPage() {
         </View>
       </View>
 
+      {/* Monthly Budgets */}
+      <View className="px-5 mt-6">
+        <View className="flex-row items-center justify-between mb-3">
+          <Text className="font-bold text-sm text-[#0f3a31]">Monthly budgets</Text>
+          <TouchableOpacity
+            onPress={() => {
+              const draft: Record<string, string> = {};
+              cats.forEach((c) => { draft[c.name] = c.budget.toString(); });
+              setBudgetDraft(draft);
+              setBudgetModalOpen(true);
+            }}
+          >
+            <Text className="text-xs font-semibold text-[#10b981]">⚙ Set budgets</Text>
+          </TouchableOpacity>
+        </View>
+        <View className="bg-white border border-[#e5e7eb] rounded-3xl p-5 items-center shadow-sm">
+          <View className="w-14 h-14 rounded-2xl bg-[#f3f4f6] items-center justify-center mb-3">
+            <Text style={{ fontSize: 26 }}>🎯</Text>
+          </View>
+          <Text className="font-bold text-[#0f3a31] text-sm">Manage spending limits</Text>
+          <Text className="text-xs text-[#7c8a87] text-center mt-1 leading-5">
+            Set monthly limits per category and track how close you are to your budget.
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              const draft: Record<string, string> = {};
+              cats.forEach((c) => { draft[c.name] = c.budget.toString(); });
+              setBudgetDraft(draft);
+              setBudgetModalOpen(true);
+            }}
+            className="mt-4 px-6 py-2.5 rounded-full bg-[#0f4a3f] items-center"
+          >
+            <Text className="text-xs font-bold text-white">Set budgets</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Recent transactions list */}
       <View className="px-5 mt-6 pb-8">
         <Text className="font-bold text-sm text-[#0f3a31] mb-3">Recent transactions</Text>
@@ -281,92 +336,151 @@ export default function ExpensesPage() {
         visible={modalOpen}
         transparent
         animationType="slide"
-        onRequestClose={() => setModalOpen(false)}
+        onRequestClose={() => { setModalOpen(false); setCatDropdownOpen(false); }}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6">
-            <Text className="text-lg font-bold text-[#0f3a31] mb-1">Log expense</Text>
-            <Text className="text-xs text-[#7c8a87] mb-5">Quickly capture a spend.</Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
+            <View style={{ backgroundColor: "#ffffff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: Platform.OS === "ios" ? 40 : 28 }}>
 
-            <View className="space-y-4">
-              <View>
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Description</Text>
-                <TextInput
-                  value={formName}
-                  onChangeText={setFormName}
-                  placeholder="Swiggy dinner"
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
+              {/* Handle bar */}
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: "#e5e7eb", alignSelf: "center", marginBottom: 20 }} />
+
+              <Text style={{ fontSize: 18, fontWeight: "800", color: "#0f3a31", marginBottom: 4 }}>Log expense</Text>
+              <Text style={{ fontSize: 12, color: "#7c8a87", marginBottom: 20 }}>Quickly capture a spend.</Text>
+
+              {/* Description */}
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#7c8a87", marginBottom: 6 }}>Description</Text>
+              <TextInput
+                value={formName}
+                onChangeText={setFormName}
+                placeholder="e.g. Swiggy dinner"
+                placeholderTextColor="#9ca3af"
+                style={{ backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#0f3a31", marginBottom: 16 }}
+              />
+
+              {/* Amount */}
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#7c8a87", marginBottom: 6 }}>Amount (₹)</Text>
+              <TextInput
+                value={formAmount}
+                onChangeText={setFormAmount}
+                keyboardType="numeric"
+                placeholder="250"
+                placeholderTextColor="#9ca3af"
+                style={{ backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#0f3a31", marginBottom: 16 }}
+              />
+
+              {/* Category pills — no dropdown, works perfectly on Android */}
+              <Text style={{ fontSize: 11, fontWeight: "700", color: "#7c8a87", marginBottom: 10 }}>Category</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
+                {[
+                  { label: "Food", emoji: "🍽️" },
+                  { label: "Shopping", emoji: "🛍️" },
+                  { label: "Transport", emoji: "🚗" },
+                  { label: "Entertainment", emoji: "🎬" },
+                  { label: "Home", emoji: "🏠" },
+                ].map((c) => {
+                  const active = formCat === c.label;
+                  return (
+                    <TouchableOpacity
+                      key={c.label}
+                      onPress={() => setFormCat(c.label)}
+                      style={{
+                        flexDirection: "row", alignItems: "center", gap: 6,
+                        paddingHorizontal: 14, paddingVertical: 9,
+                        borderRadius: 50,
+                        backgroundColor: active ? "#0f4a3f" : "#f3f4f6",
+                        borderWidth: 1,
+                        borderColor: active ? "#0f4a3f" : "#e5e7eb",
+                      }}
+                    >
+                      <Text style={{ fontSize: 13 }}>{c.emoji}</Text>
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: active ? "#ffffff" : "#0f3a31" }}>{c.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
-              <View className="flex-row space-x-3 mt-3">
-                <View className="flex-1">
-                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Amount (₹)</Text>
-                  <TextInput
-                    value={formAmount}
-                    onChangeText={setFormAmount}
-                    keyboardType="numeric"
-                    placeholder="250"
-                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                  />
-                </View>
-              </View>
-
-              <View className="mt-3">
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Category</Text>
-                <View className="relative">
-                  <TouchableOpacity
-                    onPress={() => setCatDropdownOpen(!catDropdownOpen)}
-                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3.5 flex-row justify-between items-center"
-                  >
-                    <Text className="text-sm text-[#0f3a31] font-semibold">{formCat}</Text>
-                    <Text className="text-xs text-[#7c8a87] font-bold">{catDropdownOpen ? "▲" : "▼"}</Text>
-                  </TouchableOpacity>
-
-                  {catDropdownOpen && (
-                    <View className="mt-1 bg-white border border-[#e5e7eb] rounded-2xl overflow-hidden shadow-md">
-                      {["Food", "Shopping", "Transport", "Entertainment", "Home"].map((c) => (
-                        <TouchableOpacity
-                          key={c}
-                          onPress={() => {
-                            setFormCat(c);
-                            setCatDropdownOpen(false);
-                          }}
-                          className={`px-4 py-3 border-b border-[#f3f4f6] ${
-                            formCat === c ? "bg-emerald-50/50" : ""
-                          }`}
-                        >
-                          <Text className={`text-xs ${formCat === c ? "font-bold text-[#0f4a3f]" : "text-[#0f3a31] font-semibold"}`}>
-                            {c}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              <View className="flex-row space-x-3 mt-6 pt-4 border-t border-[#e5e7eb]">
+              {/* Buttons */}
+              <View style={{ flexDirection: "row", gap: 12, borderTopWidth: 1, borderTopColor: "#f3f4f6", paddingTop: 16 }}>
                 <TouchableOpacity
-                  onPress={() => {
-                    setModalOpen(false);
-                    setCatDropdownOpen(false);
-                  }}
-                  className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center"
+                  onPress={() => { setModalOpen(false); setCatDropdownOpen(false); }}
+                  style={{ flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#f3f4f6", alignItems: "center" }}
                 >
-                  <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#7c8a87" }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleAddExpense}
-                  className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center"
+                  style={{ flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#0f4a3f", alignItems: "center" }}
                 >
-                  <Text className="text-xs font-bold text-white">Log expense</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#ffffff" }}>Log expense</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+      {/* Set Budgets Modal */}
+      <Modal
+        visible={budgetModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setBudgetModalOpen(false)}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-white rounded-t-3xl p-6">
+            <Text className="text-lg font-bold text-[#0f3a31] mb-1">Set monthly budgets</Text>
+            <Text className="text-xs text-[#7c8a87] mb-5">Set spending limits per category.</Text>
+
+            {cats.map((c) => {
+              const Icon = c.icon;
+              let iconBg = "#f3f4f6";
+              let iconColor = "#6b7280";
+              if (c.name === "Food & Dining") { iconBg = "#d1fae5"; iconColor = "#059669"; }
+              else if (c.name === "Shopping") { iconBg = "#fee2e2"; iconColor = "#e11d48"; }
+              else if (c.name === "Transport") { iconBg = "#fef3c7"; iconColor = "#d97706"; }
+              else if (c.name === "Entertainment") { iconBg = "#ede9fe"; iconColor = "#7c3aed"; }
+              else if (c.name === "Home & Bills") { iconBg = "#e0f2fe"; iconColor = "#0284c7"; }
+
+              return (
+                <View key={c.name} className="flex-row items-center mb-4">
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: iconBg, justifyContent: "center", alignItems: "center", marginRight: 12 }}>
+                    {Icon && <Icon size={16} color={iconColor} />}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs font-bold text-[#7c8a87] mb-1">{c.name}</Text>
+                    <TextInput
+                      value={budgetDraft[c.name] ?? ""}
+                      onChangeText={(v: string) => setBudgetDraft((d) => ({ ...d, [c.name]: v }))}
+                      keyboardType="numeric"
+                      placeholder={`₹${c.budget.toLocaleString("en-IN")}`}
+                      placeholderTextColor="#9ca3af"
+                      className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm text-[#0f3a31]"
+                    />
+                  </View>
+                </View>
+              );
+            })}
+
+            <View className="flex-row gap-3 mt-2 pt-4 border-t border-[#e5e7eb]">
+              <TouchableOpacity
+                onPress={() => setBudgetModalOpen(false)}
+                className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center"
+              >
+                <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveBudgets}
+                className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center"
+              >
+                <Text className="text-xs font-bold text-white">Save budgets</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
     </ScrollView>
   );
-}
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiFetch, TOKEN_KEY, USER_KEY, addAuthListener, notifyAuthChange } from "./api";
+import { apiFetch, TOKEN_KEY, USER_KEY, addAuthListener, notifyAuthChange, clearApiCache } from "./api";
 
 export type FimUser = {
   id: number;
@@ -29,6 +29,7 @@ export async function signIn(email: string, password: string): Promise<FimUser> 
 
   await AsyncStorage.setItem(TOKEN_KEY, data.access_token);
   await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
+  clearApiCache();  // Invalidate cached token so next request picks up the new one
   notifyAuthChange();
   return data.user;
 }
@@ -70,6 +71,7 @@ export async function verifyEmail(email: string, code: string): Promise<FimUser>
 export async function signOut() {
   await AsyncStorage.removeItem(TOKEN_KEY);
   await AsyncStorage.removeItem(USER_KEY);
+  clearApiCache();  // Clear cached token on logout
   notifyAuthChange();
 }
 
