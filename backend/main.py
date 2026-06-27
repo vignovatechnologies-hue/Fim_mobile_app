@@ -93,8 +93,9 @@ app.include_router(payments.router)
 def read_root():
     return {"message": "FIM API is running successfully. All routes are modularized."}
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     """Lightweight health check endpoint — used by UptimeRobot to keep Render server alive.
+    Accepts both GET and HEAD (UptimeRobot sends HEAD by default).
     No DB queries, no auth. Always returns 200 instantly."""
     return {"status": "ok"}
