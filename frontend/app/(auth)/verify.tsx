@@ -7,7 +7,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   ScrollView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from "react-native";
 import { MailCheck as MailCheckIcon, ArrowLeft as ArrowLeftIcon } from "lucide-react-native";
 
@@ -20,7 +21,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 export default function VerifyPage() {
   const router = useRouter();
   const { email: paramEmail } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   
   const email = (paramEmail as string) || user?.email || "";
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
@@ -33,6 +34,14 @@ export default function VerifyPage() {
       router.replace("/(tabs)");
     }
   }, [user]);
+
+  if (!ready) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f9fafb" }}>
+        <ActivityIndicator size="large" color="#0f4a3f" />
+      </View>
+    );
+  }
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -60,19 +69,27 @@ export default function VerifyPage() {
     }
   };
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleSubmit = async () => {
     const code = digits.join("");
     if (code.length !== 6) {
-      Alert.alert("Input Error", "Please enter the complete 6-digit verification code.");
+      showAlert("Input Error", "Please enter the complete 6-digit verification code.");
       return;
     }
     setBusy(true);
     try {
       const u = await verifyEmail(email, code);
-      Alert.alert("Verified", `Email verified successfully. Welcome, ${u.name.split(" ")[0]}! 🎉`);
+      showAlert("Verified", `Email verified successfully. Welcome, ${u.name.split(" ")[0]}! 🎉`);
       router.replace("/(tabs)");
     } catch (err: any) {
-      Alert.alert("Verification Failed", err.message || "Invalid OTP code");
+      showAlert("Verification Failed", err.message || "Invalid OTP code");
     } finally {
       setBusy(false);
     }
@@ -83,9 +100,9 @@ export default function VerifyPage() {
     try {
       await resendVerification(email);
       setCooldown(30);
-      Alert.alert("Code Resent", "A new 6-digit OTP code has been sent to your email.");
+      showAlert("Code Resent", "A new 6-digit OTP code has been sent to your email.");
     } catch (err: any) {
-      Alert.alert("Resend Failed", err.message || "Failed to resend code");
+      showAlert("Resend Failed", err.message || "Failed to resend code");
     }
   };
 
