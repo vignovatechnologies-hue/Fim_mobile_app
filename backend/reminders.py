@@ -255,8 +255,8 @@ def check_and_send_reminders(db: Session) -> dict:
     """
     Core function that scans database for all unpaid loans and sends reminders.
     Rules:
-    - Send reminder if today is 5 days before the due date, up to the due date.
-    - Specifically, today.day >= loan.due_day - 5.
+    - Send reminder if today is 3 days before the due date, up to the due date.
+    - Specifically, today.day >= loan.due_day - 3.
     - Send via Email and SMS if user has verified phone/email.
     """
     today = datetime.date.today()
@@ -288,8 +288,8 @@ def check_and_send_reminders(db: Session) -> dict:
         due_date_str = f"{due_day} {current_month_name}"
         days_left = (due_date - today).days
         
-        # Check if today is between due_date - 5 days and due_date (inclusive, or if overdue)
-        if today.day >= due_day - 5:
+        # Check if today is between due_date - 3 days and due_date (inclusive, or if overdue)
+        if today.day >= due_day - 3:
             # Send Email
             email_success = send_emi_reminder_email(
                 to_email=user.email,

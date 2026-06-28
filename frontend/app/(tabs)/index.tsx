@@ -182,12 +182,12 @@ export default function Dashboard() {
         }),
       });
       Alert.alert(
-        "Payment Successful",
-        `₹${totalAmount.toLocaleString("en-IN")} processed! ${result.loans_paid?.length ?? unpaidIds.length} EMI(s) marked paid.`
+        "Payment Recorded",
+        `₹${totalAmount.toLocaleString("en-IN")} logged! ${result.loans_paid?.length ?? unpaidIds.length} EMI(s) marked paid.`
       );
       fetchData();
     } catch (err: any) {
-      Alert.alert("Payment Failed", err.message || "Failed to process payment");
+      Alert.alert("Operation Failed", err.message || "Failed to record payment");
       setLoading(false);
     }
   };
@@ -225,7 +225,7 @@ export default function Dashboard() {
       sub: summary.savings_goal_text,
       icon: TrendingUp,
       iconBg: "#fef3c7", iconColor: C.warning,
-      action: () => router.push("/savings"),
+      action: () => router.push("/(tabs)/savings"),
     },
     {
       label: "Next EMI",
@@ -240,8 +240,8 @@ export default function Dashboard() {
   const quickActions = [
     { label: "Add Loan", icon: Plus, action: () => router.push("/(tabs)/emis") },
     { label: "Log Expense", icon: ArrowUpRight, action: () => router.push("/(tabs)/expenses") },
-    { label: "Add Income", icon: ArrowDownRight, action: () => router.push("/income") },
-    { label: "Set Goal", icon: TrendingUp, action: () => router.push("/savings") },
+    { label: "Add Income", icon: ArrowDownRight, action: () => router.push("/(tabs)/income") },
+    { label: "Set Goal", icon: TrendingUp, action: () => router.push("/(tabs)/savings") },
   ];
 
   return (
@@ -290,7 +290,7 @@ export default function Dashboard() {
           <Text style={s.balanceAmount}>₹ {summary.net_balance.toLocaleString("en-IN")}</Text>
 
           <View style={s.balanceRow}>
-            <TouchableOpacity onPress={() => router.push("/income")} style={s.balanceChip}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/income")} style={s.balanceChip}>
               <View style={s.balanceChipLabel}>
                 <ArrowDownRight size={13} color="rgba(255,255,255,0.8)" />
                 <Text style={s.balanceChipLabelTxt}>Income</Text>
@@ -309,7 +309,7 @@ export default function Dashboard() {
         </View>
       </View>
 
-      {/* ── Smart Pay CTA ── */}
+      {/* ── Record Payment CTA ── */}
       <View style={[s.px, { marginTop: 14 }]}>
         <TouchableOpacity
           onPress={() => upcoming.length === 0
@@ -324,12 +324,12 @@ export default function Dashboard() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.smartPayTitle}>
-              {upcoming.length === 0 ? "All EMIs paid this month" : `Smart Pay ${upcoming.length} EMIs`}
+              {upcoming.length === 0 ? "All EMIs marked paid" : `Record ${upcoming.length} Payments`}
             </Text>
             <Text style={s.smartPaySub}>
               {upcoming.length === 0
-                ? "Next due in 30 days"
-                : `One tap · ₹${totalUnpaidEmi.toLocaleString("en-IN")} due soon`}
+                ? "No upcoming EMIs"
+                : "Mark upcoming EMIs as paid"}
             </Text>
           </View>
           <ChevronRight size={18} color={C.mutedLighter} />
@@ -530,16 +530,16 @@ export default function Dashboard() {
       <Modal visible={confirmModal} transparent animationType="fade" onRequestClose={() => setConfirmModal(false)}>
         <View style={s.confirmOverlay}>
           <View style={s.confirmCard}>
-            <Text style={s.confirmTitle}>Smart Pay {upcoming.length} EMIs?</Text>
+            <Text style={s.confirmTitle}>Record {upcoming.length} Payments?</Text>
             <Text style={s.confirmBody}>
-              ₹{totalUnpaidEmi.toLocaleString("en-IN")} will be debited from your primary bank account.
+              ₹{totalUnpaidEmi.toLocaleString("en-IN")} across {upcoming.length} lenders will be marked as paid in your tracker.
             </Text>
             <View style={s.confirmBtns}>
               <TouchableOpacity onPress={() => setConfirmModal(false)} style={s.confirmCancel}>
                 <Text style={s.confirmCancelTxt}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handlePayAll} style={s.confirmPay}>
-                <Text style={s.confirmPayTxt}>Pay ₹{totalUnpaidEmi.toLocaleString("en-IN")}</Text>
+                <Text style={s.confirmPayTxt}>Mark ₹{totalUnpaidEmi.toLocaleString("en-IN")} Paid</Text>
               </TouchableOpacity>
             </View>
           </View>

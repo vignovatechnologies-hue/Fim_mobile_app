@@ -157,7 +157,7 @@ export default function EmisPage() {
       Alert.alert("Success", "EMI marked paid!");
       fetchLoans();
     } catch (err: any) {
-      Alert.alert("Payment Failed", err.message || "Failed to make simulated payment");
+      Alert.alert("Operation Failed", err.message || "Failed to record payment");
       setLoading(false);
     }
   };
@@ -184,7 +184,7 @@ export default function EmisPage() {
       Alert.alert("Success", "All EMIs marked paid!");
       fetchLoans();
     } catch (err: any) {
-      Alert.alert("Payment Failed", err.message || "Failed to pay all EMIs");
+      Alert.alert("Operation Failed", err.message || "Failed to mark EMIs as paid");
       setLoading(false);
     }
   };
@@ -248,9 +248,31 @@ export default function EmisPage() {
     setFormOpen(true);
   };
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   const handleSaveLoan = async () => {
+    console.log("handleSaveLoan triggered!");
+    console.log("Form values:", {
+      formLoanName,
+      formLenderName,
+      formAmount,
+      formRate,
+      formTenure,
+      startDate,
+      formEmi,
+      formDueDay,
+      formLeftAmount,
+      formType
+    });
+
     if (!formLoanName || !formLenderName || !formAmount || !formRate || !formTenure || !startDate) {
-      Alert.alert("Input Error", "All fields marked with * are required.");
+      showAlert("Input Error", "All fields marked with * are required.");
       return;
     }
 
@@ -291,7 +313,7 @@ export default function EmisPage() {
             paid_tenure: paidTenureVal,
           }),
         });
-        Alert.alert("Success", "Loan updated successfully");
+        showAlert("Success", "Loan updated successfully");
       } else {
         // Add new loan
         await apiFetch("/api/loans", {
@@ -309,11 +331,11 @@ export default function EmisPage() {
             paid_tenure: paidTenureVal,
           }),
         });
-        Alert.alert("Success", "New loan added successfully");
+        showAlert("Success", "New loan added successfully");
       }
       fetchLoans();
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to save loan details");
+      showAlert("Error", err.message || "Failed to save loan details");
       setLoading(false);
     }
   };
@@ -388,7 +410,7 @@ export default function EmisPage() {
           <TouchableOpacity
             onPress={() => {
               if (totalUnpaid === 0) {
-                Alert.alert("On Track", "All EMIs paid for this cycle ✓");
+                Alert.alert("On Track", "All EMIs marked paid for this cycle ✓");
               } else {
                 setConfirmAllModal(true);
               }
@@ -396,7 +418,7 @@ export default function EmisPage() {
             className="mt-5 w-full bg-white rounded-2xl py-3.5 items-center flex-row justify-center space-x-2 shadow-sm"
           >
             <Zap size={14} color="#f59e0b" fill="#f59e0b" />
-            <Text className="text-[#0f3a31] font-extrabold text-xs">Smart Pay All EMIs</Text>
+            <Text className="text-[#0f3a31] font-extrabold text-xs">Record All Payments</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -493,7 +515,7 @@ export default function EmisPage() {
                   }`}
                 >
                   <Text className={`text-xs font-bold ${l.paid ? "text-emerald-600" : "text-white"}`}>
-                    {l.paid ? "Paid ✓" : "Pay now"}
+                    {l.paid ? "Paid ✓" : "Mark paid"}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -523,9 +545,9 @@ export default function EmisPage() {
       >
         <View className="flex-1 justify-center items-center bg-black/50 px-6">
           <View className="bg-white rounded-3xl p-6 w-full max-w-sm">
-            <Text className="text-lg font-bold text-[#0f3a31] mb-2">Pay all EMIs?</Text>
-            <Text className="text-sm text-[#7c8a87] mb-6">
-              ₹ {totalUnpaid.toLocaleString("en-IN")} across {loans.filter((l) => !l.paid).length} lenders will be auto-debited.
+            <Text className="text-lg font-bold text-[#0f3a31] mb-2">Record all as paid?</Text>
+            <Text className="text-xs text-[#7c8a87] mb-6">
+              ₹ {totalUnpaid.toLocaleString("en-IN")} across {loans.filter((l) => !l.paid).length} lenders will be marked as paid in your tracker.
             </Text>
             <View className="flex-row justify-end space-x-3">
               <TouchableOpacity
@@ -566,7 +588,8 @@ export default function EmisPage() {
                 <TextInput
                   value={formLoanName}
                   onChangeText={setFormLoanName}
-                  placeholder="Home Loan"
+                  placeholder=""
+                  placeholderTextColor="#9ca3af"
                   className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                 />
               </View>
@@ -576,7 +599,8 @@ export default function EmisPage() {
                 <TextInput
                   value={formLenderName}
                   onChangeText={setFormLenderName}
-                  placeholder="SBI Bank"
+                  placeholder=""
+                  placeholderTextColor="#9ca3af"
                   className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                 />
               </View>
@@ -588,7 +612,8 @@ export default function EmisPage() {
                     value={formAmount}
                     onChangeText={setFormAmount}
                     keyboardType="numeric"
-                    placeholder="500000"
+                    placeholder=""
+                    placeholderTextColor="#9ca3af"
                     className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                   />
                 </View>
@@ -598,7 +623,8 @@ export default function EmisPage() {
                     value={formRate}
                     onChangeText={setFormRate}
                     keyboardType="numeric"
-                    placeholder="9.5"
+                    placeholder=""
+                    placeholderTextColor="#9ca3af"
                     className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                   />
                 </View>
@@ -611,7 +637,8 @@ export default function EmisPage() {
                     value={formTenure}
                     onChangeText={setFormTenure}
                     keyboardType="numeric"
-                    placeholder="60"
+                    placeholder=""
+                    placeholderTextColor="#9ca3af"
                     className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                   />
                 </View>
@@ -633,7 +660,7 @@ export default function EmisPage() {
                 <View className="flex-1">
                   <Text className="text-xs font-bold text-[#7c8a87] mb-1">EMI Amount (Auto Calculated)</Text>
                   <TextInput
-                    value={formEmi ? `₹${Number(formEmi).toLocaleString("en-IN")}` : "Auto Calculated"}
+                    value={formEmi ? `₹${Number(formEmi).toLocaleString("en-IN")}` : "Calculated automatically"}
                     editable={false}
                     className="w-full bg-gray-100 border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-gray-500 font-bold"
                   />
@@ -644,7 +671,8 @@ export default function EmisPage() {
                     value={formDueDay}
                     onChangeText={setFormDueDay}
                     keyboardType="numeric"
-                    placeholder="5"
+                    placeholder=""
+                    placeholderTextColor="#9ca3af"
                     className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                   />
                 </View>
@@ -656,7 +684,8 @@ export default function EmisPage() {
                   value={formLeftAmount}
                   onChangeText={setFormLeftAmount}
                   keyboardType="numeric"
-                  placeholder="Leave blank to auto-calculate"
+                  placeholder=""
+                  placeholderTextColor="#9ca3af"
                   className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                 />
               </View>

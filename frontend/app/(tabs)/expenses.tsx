@@ -171,13 +171,13 @@ export default function ExpensesPage() {
             <Text className="text-xs font-bold text-[#0f3a31]">Expenses</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.push("/income")}
+            onPress={() => router.push("/(tabs)/income")}
             className="flex-grow flex-1 py-2 items-center rounded-xl"
           >
             <Text className="text-xs font-bold text-[#7c8a87]">Income</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.push("/savings")}
+            onPress={() => router.push("/(tabs)/savings")}
             className="flex-grow flex-1 py-2 items-center rounded-xl"
           >
             <Text className="text-xs font-bold text-[#7c8a87]">Savings</Text>
@@ -356,7 +356,7 @@ export default function ExpensesPage() {
               <TextInput
                 value={formName}
                 onChangeText={setFormName}
-                placeholder="e.g. Swiggy dinner"
+                placeholder=""
                 placeholderTextColor="#9ca3af"
                 style={{ backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#0f3a31", marginBottom: 16 }}
               />
@@ -367,7 +367,7 @@ export default function ExpensesPage() {
                 value={formAmount}
                 onChangeText={setFormAmount}
                 keyboardType="numeric"
-                placeholder="250"
+                placeholder=""
                 placeholderTextColor="#9ca3af"
                 style={{ backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 14, color: "#0f3a31", marginBottom: 16 }}
               />
