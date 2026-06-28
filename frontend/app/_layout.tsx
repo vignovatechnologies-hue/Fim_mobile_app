@@ -3,18 +3,12 @@ import { Slot, useRouter, useSegments } from "expo-router";
 import { useAuth } from "../lib/auth";
 import { ActivityIndicator, View, Platform } from "react-native";
 import "../global.css";
-import * as Notifications from "expo-notifications";
+// NOTE: expo-notifications is NOT statically imported here.
+// It is dynamically required at runtime only in production builds,
+// because SDK 53 removed push notification support from Expo Go.
 import * as Device from "expo-device";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import { apiFetch } from "../lib/api";
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  } as any),
-});
 
 function RootLayoutNav() {
   const { user, ready } = useAuth();
@@ -60,24 +54,37 @@ function RootLayoutNav() {
         return;
       }
 
+      // Dynamically require expo-notifications only in production/dev builds
+      // (never in Expo Go — the static import itself crashes SDK 53+)
+      const Notifications = require("expo-notifications");
+
+      // Set handler here now that we have the module
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+
       let token = null;
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "default",
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#6366f1',
+          lightColor: "#6366f1",
         });
       }
 
       if (Device.isDevice) {
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
-        if (existingStatus !== 'granted') {
+        if (existingStatus !== "granted") {
           const { status } = await Notifications.requestPermissionsAsync();
           finalStatus = status;
         }
-        if (finalStatus === 'granted') {
+        if (finalStatus === "granted") {
           try {
             token = (await Notifications.getDevicePushTokenAsync()).data;
           } catch (e) {
