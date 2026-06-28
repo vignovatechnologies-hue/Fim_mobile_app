@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Platform
+  Platform,
+  KeyboardAvoidingView
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -306,59 +307,64 @@ export default function SavingsPage() {
           setEditingGoal(null);
         }}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6">
-            <Text className="text-lg font-bold text-[#0f3a31] mb-1">
-              {editingGoal ? "Edit savings goal" : "New savings goal"}
-            </Text>
-            <Text className="text-xs text-[#7c8a87] mb-5">
-              {editingGoal ? `Modify details for ${editingGoal.name}` : "Set a target and start saving."}
-            </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <View className="bg-white rounded-t-3xl p-6">
+              <Text className="text-lg font-bold text-[#0f3a31] mb-1">
+                {editingGoal ? "Edit savings goal" : "New savings goal"}
+              </Text>
+              <Text className="text-xs text-[#7c8a87] mb-5">
+                {editingGoal ? `Modify details for ${editingGoal.name}` : "Set a target and start saving."}
+              </Text>
 
-            <View className="space-y-4">
-              <View>
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Goal name</Text>
-                <TextInput
-                  value={formName}
-                  onChangeText={setFormName}
-                  placeholder=""
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
-              </View>
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Goal name</Text>
+                  <TextInput
+                    value={formName}
+                    onChangeText={setFormName}
+                    placeholder=""
+                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                  />
+                </View>
 
-              <View className="mt-3">
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Target amount (₹)</Text>
-                <TextInput
-                  value={formTarget}
-                  onChangeText={setFormTarget}
-                  keyboardType="numeric"
-                  placeholder=""
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
-              </View>
+                <View className="mt-3">
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Target amount (₹)</Text>
+                  <TextInput
+                    value={formTarget}
+                    onChangeText={setFormTarget}
+                    keyboardType="numeric"
+                    placeholder=""
+                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                  />
+                </View>
 
-              <View className="flex-row space-x-3 mt-6 pt-4 border-t border-[#e5e7eb]">
-                <TouchableOpacity
-                  onPress={() => {
-                    setAddGoalOpen(false);
-                    setEditingGoal(null);
-                  }}
-                  className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center"
-                >
-                  <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleAddGoal}
-                  className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center"
-                >
-                  <Text className="text-xs font-bold text-white">
-                    {editingGoal ? "Save changes" : "Create goal"}
-                  </Text>
-                </TouchableOpacity>
+                <View className="flex-row space-x-3 mt-6 pt-4 border-t border-[#e5e7eb]">
+                  <TouchableOpacity
+                    onPress={() => {
+                      setAddGoalOpen(false);
+                      setEditingGoal(null);
+                    }}
+                    className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center"
+                  >
+                    <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAddGoal}
+                    className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center"
+                  >
+                    <Text className="text-xs font-bold text-white">
+                      {editingGoal ? "Save changes" : "Create goal"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Add Contribution Money Modal */}
@@ -368,43 +374,48 @@ export default function SavingsPage() {
         animationType="fade"
         onRequestClose={() => setContribGoal(null)}
       >
-        <View className="flex-1 justify-center items-center bg-black/50 px-6">
-          <View className="bg-white rounded-3xl p-6 w-full max-w-sm">
-            <Text className="text-lg font-bold text-[#0f3a31] mb-1">Add money</Text>
-            <Text className="text-xs text-[#7c8a87] mb-5">
-              Add to {contribGoal && goals[contribGoal.idx]?.name} goal.
-            </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View className="flex-1 justify-center items-center bg-black/50 px-6">
+            <View className="bg-white rounded-3xl p-6 w-full max-w-sm">
+              <Text className="text-lg font-bold text-[#0f3a31] mb-1">Add money</Text>
+              <Text className="text-xs text-[#7c8a87] mb-5">
+                Add to {contribGoal && goals[contribGoal.idx]?.name} goal.
+              </Text>
 
-            <View className="space-y-4">
-              <View>
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Amount (₹)</Text>
-                <TextInput
-                  value={contribGoal?.amount ?? ""}
-                  onChangeText={(val: string) => contribGoal && setContribGoal({ ...contribGoal, amount: val })}
-                  keyboardType="numeric"
-                  placeholder=""
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                  autoFocus
-                />
-              </View>
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Amount (₹)</Text>
+                  <TextInput
+                    value={contribGoal?.amount ?? ""}
+                    onChangeText={(val: string) => contribGoal && setContribGoal({ ...contribGoal, amount: val })}
+                    keyboardType="numeric"
+                    placeholder=""
+                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                    autoFocus
+                  />
+                </View>
 
-              <View className="flex-row space-x-3 justify-end mt-4">
-                <TouchableOpacity
-                  onPress={() => setContribGoal(null)}
-                  className="px-4 py-2.5 rounded-xl bg-gray-100"
-                >
-                  <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleContribution}
-                  className="px-4 py-2.5 rounded-xl bg-[#0f4a3f]"
-                >
-                  <Text className="text-xs font-bold text-white">Add money</Text>
-                </TouchableOpacity>
+                <View className="flex-row space-x-3 justify-end mt-4">
+                  <TouchableOpacity
+                    onPress={() => setContribGoal(null)}
+                    className="px-4 py-2.5 rounded-xl bg-gray-100"
+                  >
+                    <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleContribution}
+                    className="px-4 py-2.5 rounded-xl bg-[#0f4a3f]"
+                  >
+                    <Text className="text-xs font-bold text-white">Add money</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Delete Confirmation Modal */}

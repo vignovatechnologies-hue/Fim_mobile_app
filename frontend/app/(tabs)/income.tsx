@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Platform
+  Platform,
+  KeyboardAvoidingView
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -286,96 +287,101 @@ export default function IncomePage() {
           setEditingIncome(null);
         }}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6">
-            <Text className="text-lg font-bold text-[#0f3a31] mb-1">
-              {editingIncome ? "Edit income source" : "Add income source"}
-            </Text>
-            <Text className="text-xs text-[#7c8a87] mb-5">
-              {editingIncome ? `Modify details for ${editingIncome.name}` : "Track a new inflow."}
-            </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <View className="bg-white rounded-t-3xl p-6">
+              <Text className="text-lg font-bold text-[#0f3a31] mb-1">
+                {editingIncome ? "Edit income source" : "Add income source"}
+              </Text>
+              <Text className="text-xs text-[#7c8a87] mb-5">
+                {editingIncome ? `Modify details for ${editingIncome.name}` : "Track a new inflow."}
+              </Text>
 
-            <View className="space-y-4">
-              <View>
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Source description</Text>
-                <TextInput
-                  value={formName}
-                  onChangeText={setFormName}
-                  placeholder=""
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
-              </View>
-
-              <View className="flex-row space-x-3 mt-3">
-                <View className="flex-1">
-                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Amount (₹)</Text>
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Source description</Text>
                   <TextInput
-                    value={formAmount}
-                    onChangeText={setFormAmount}
-                    keyboardType="numeric"
+                    value={formName}
+                    onChangeText={setFormName}
                     placeholder=""
                     className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                   />
                 </View>
-              </View>
 
-              <View className="mt-3">
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Type</Text>
-                <View className="relative">
-                  <TouchableOpacity
-                    onPress={() => setTypeDropdownOpen(!typeDropdownOpen)}
-                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3.5 flex-row justify-between items-center"
-                  >
-                    <Text className="text-sm text-[#0f3a31] font-semibold">{formType}</Text>
-                    <Text className="text-xs text-[#7c8a87] font-bold">{typeDropdownOpen ? "▲" : "▼"}</Text>
-                  </TouchableOpacity>
-
-                  {typeDropdownOpen && (
-                    <View className="mt-1 bg-white border border-[#e5e7eb] rounded-2xl overflow-hidden shadow-md">
-                      {["Salary", "Freelance", "Investment", "Rental"].map((c) => (
-                        <TouchableOpacity
-                          key={c}
-                          onPress={() => {
-                            setFormType(c);
-                            setTypeDropdownOpen(false);
-                          }}
-                          className={`px-4 py-3 border-b border-[#f3f4f6] ${
-                            formType === c ? "bg-emerald-50/50" : ""
-                          }`}
-                        >
-                          <Text className={`text-xs ${formType === c ? "font-bold text-[#0f4a3f]" : "text-[#0f3a31] font-semibold"}`}>
-                            {c}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
+                <View className="flex-row space-x-3 mt-3">
+                  <View className="flex-1">
+                    <Text className="text-xs font-bold text-[#7c8a87] mb-1">Amount (₹)</Text>
+                    <TextInput
+                      value={formAmount}
+                      onChangeText={setFormAmount}
+                      keyboardType="numeric"
+                      placeholder=""
+                      className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                    />
+                  </View>
                 </View>
-              </View>
 
-              <View className="flex-row space-x-3 mt-6 pt-4 border-t border-[#e5e7eb]">
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalOpen(false);
-                    setEditingIncome(null);
-                    setTypeDropdownOpen(false);
-                  }}
-                  className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center"
-                >
-                  <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleAddIncome}
-                  className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center"
-                >
-                  <Text className="text-xs font-bold text-white">
-                    {editingIncome ? "Save changes" : "Add income"}
-                  </Text>
-                </TouchableOpacity>
+                <View className="mt-3">
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Type</Text>
+                  <View className="relative">
+                    <TouchableOpacity
+                      onPress={() => setTypeDropdownOpen(!typeDropdownOpen)}
+                      className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3.5 flex-row justify-between items-center"
+                    >
+                      <Text className="text-sm text-[#0f3a31] font-semibold">{formType}</Text>
+                      <Text className="text-xs text-[#7c8a87] font-bold">{typeDropdownOpen ? "▲" : "▼"}</Text>
+                    </TouchableOpacity>
+
+                    {typeDropdownOpen && (
+                      <View className="mt-1 bg-white border border-[#e5e7eb] rounded-2xl overflow-hidden shadow-md">
+                        {["Salary", "Freelance", "Investment", "Rental"].map((c) => (
+                          <TouchableOpacity
+                            key={c}
+                            onPress={() => {
+                              setFormType(c);
+                              setTypeDropdownOpen(false);
+                            }}
+                            className={`px-4 py-3 border-b border-[#f3f4f6] ${
+                              formType === c ? "bg-emerald-50/50" : ""
+                            }`}
+                          >
+                            <Text className={`text-xs ${formType === c ? "font-bold text-[#0f4a3f]" : "text-[#0f3a31] font-semibold"}`}>
+                              {c}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                <View className="flex-row space-x-3 mt-6 pt-4 border-t border-[#e5e7eb]">
+                  <TouchableOpacity
+                    onPress={() => {
+                      setModalOpen(false);
+                      setEditingIncome(null);
+                      setTypeDropdownOpen(false);
+                    }}
+                    className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center"
+                  >
+                    <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAddIncome}
+                    className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center"
+                  >
+                    <Text className="text-xs font-bold text-white">
+                      {editingIncome ? "Save changes" : "Add income"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Delete Confirmation Modal */}
