@@ -99,3 +99,16 @@ def health_check():
     Accepts both GET and HEAD (UptimeRobot sends HEAD by default).
     No DB queries, no auth. Always returns 200 instantly."""
     return {"status": "ok"}
+
+from fastapi.responses import HTMLResponse
+from legal_html import PRIVACY_POLICY_HTML, TERMS_OF_USE_HTML
+
+@app.get("/privacy-policy", response_class=HTMLResponse)
+def privacy_policy():
+    """Renders the FIM Privacy Policy as a public HTML webpage for Google Play compliance."""
+    return HTMLResponse(content=PRIVACY_POLICY_HTML, status_code=200)
+
+@app.get("/terms-of-use", response_class=HTMLResponse)
+def terms_of_use():
+    """Renders the FIM Terms of Use as a public HTML webpage for Google Play compliance."""
+    return HTMLResponse(content=TERMS_OF_USE_HTML, status_code=200)
