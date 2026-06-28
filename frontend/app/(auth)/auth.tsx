@@ -40,6 +40,14 @@ export default function AuthPage() {
   const [showServerSettings, setShowServerSettings] = useState(false);
   const [customServerUrl, setCustomServerUrl] = useState("");
 
+  const showAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
+
   useEffect(() => {
     AsyncStorage.getItem("fim.api.url").then((url) => {
       if (url) setCustomServerUrl(url);
@@ -49,10 +57,10 @@ export default function AuthPage() {
   const handleSaveServerUrl = async () => {
     if (customServerUrl.trim()) {
       await AsyncStorage.setItem("fim.api.url", customServerUrl.trim());
-      Alert.alert("Server Configured", "API Server URL updated successfully!");
+      showAlert("Server Configured", "API Server URL updated successfully!");
     } else {
       await AsyncStorage.removeItem("fim.api.url");
-      Alert.alert("Server Reset", "Reset to default auto-detected server URL.");
+      showAlert("Server Reset", "Reset to default auto-detected server URL.");
     }
     setShowServerSettings(false);
   };
@@ -72,7 +80,7 @@ export default function AuthPage() {
 
   const handleSubmit = async () => {
     if (!email || !password || (mode === "signup" && !name)) {
-      Alert.alert("Input Error", "Please fill in all required fields.");
+      showAlert("Input Error", "Please fill in all required fields.");
       return;
     }
     setBusy(true);
@@ -80,25 +88,25 @@ export default function AuthPage() {
       if (mode === "signin") {
         const u = await signIn(email, password);
         if (!u.verified) {
-          Alert.alert("Verify Email", "Please verify your email address to continue.");
+          showAlert("Verify Email", "Please verify your email address to continue.");
           router.push({
             pathname: "/(auth)/verify",
             params: { email: u.email }
           });
           return;
         }
-        Alert.alert("Welcome!", `Welcome back, ${u.name.split(" ")[0]} 👋`);
+        showAlert("Welcome!", `Welcome back, ${u.name.split(" ")[0]} 👋`);
         router.replace("/(tabs)");
       } else {
         const u = await signUp(name, email, password);
-        Alert.alert("Success", "Account created ✨ Please enter the 6-digit OTP sent to your email.");
+        showAlert("Success", "Account created ✨ Please enter the 6-digit OTP sent to your email.");
         router.push({
           pathname: "/(auth)/verify",
           params: { email: u.email }
         });
       }
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Something went wrong");
+      showAlert("Error", err.message || "Something went wrong");
     } finally {
       setBusy(false);
     }
@@ -110,10 +118,10 @@ export default function AuthPage() {
     setBusy(true);
     try {
       const u = await signIn("demo@fim.in", "demo1234");
-      Alert.alert("Welcome!", `Demo mode active. Welcome, ${u.name.split(" ")[0]} 👋`);
+      showAlert("Welcome!", `Demo mode active. Welcome, ${u.name.split(" ")[0]} 👋`);
       router.replace("/(tabs)");
     } catch (err: any) {
-      Alert.alert("Demo Error", err.message || "Failed to log in with demo account");
+      showAlert("Demo Error", err.message || "Failed to log in with demo account");
     } finally {
       setBusy(false);
     }
