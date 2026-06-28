@@ -27,6 +27,7 @@ def signup(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session
 
     # Simulate registration and send code (like the frontend does)
     verification_code = f"{random.randint(100000, 999999)}"
+    print(f"🔑 [OTP Generated] Signup OTP for {email_clean}: {verification_code}")
     expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
 
     user = User(
@@ -146,6 +147,7 @@ def resend_code(background_tasks: BackgroundTasks, payload: dict = Body(...), db
         raise HTTPException(status_code=404, detail="No account found")
 
     code = f"{random.randint(100000, 999999)}"
+    print(f"🔑 [OTP Generated] Resend OTP for {user.email}: {code}")
     user.verification_code = code
     user.verification_expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
     db.commit()
@@ -168,6 +170,7 @@ def request_reset(reset_data: UserResetRequest, background_tasks: BackgroundTask
         raise HTTPException(status_code=404, detail="No account found for this email")
 
     code = f"{random.randint(100000, 999999)}"
+    print(f"🔑 [OTP Generated] Reset Password OTP for {user.email}: {code}")
     user.reset_code = code
     user.reset_expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
     db.commit()
