@@ -59,7 +59,9 @@ def add_loan(
         diff_months = (loan_data.end_date.year - loan_data.start_date.year) * 12 + (loan_data.end_date.month - loan_data.start_date.month)
         total_tenure = max(1, diff_months)
         
-    left_amount = loan_data.left_amount if loan_data.left_amount is not None else (loan_data.emi * total_tenure)
+    left_amount = loan_data.left_amount
+    if left_amount is None:
+        left_amount = loan_data.original_amount if loan_data.original_amount is not None else (loan_data.emi * total_tenure)
     paid_tenure = loan_data.paid_tenure or 0
         
     loan = Loan(
@@ -68,6 +70,7 @@ def add_loan(
         type=loan_data.type,
         emi=loan_data.emi,
         left_amount=left_amount,
+        original_amount=loan_data.original_amount,
         total_tenure=total_tenure,
         paid_tenure=paid_tenure,
         rate=loan_data.rate,
@@ -148,6 +151,8 @@ def update_loan(
         loan.rate = loan_data.rate
     if loan_data.due_day is not None:
         loan.due_day = loan_data.due_day
+    if loan_data.original_amount is not None:
+        loan.original_amount = loan_data.original_amount
     if loan_data.start_date is not None:
         loan.start_date = loan_data.start_date
     if loan_data.end_date is not None:

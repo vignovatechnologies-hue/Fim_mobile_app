@@ -42,6 +42,7 @@ class Loan(Base):
     due_day = Column(Integer, nullable=False)  # Day of the month
     logo = Column(String, nullable=False)
     paid_this_month = Column(Boolean, default=False)
+    original_amount = Column(Float, nullable=True)
     start_date = Column(DateTime, nullable=True)
     end_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

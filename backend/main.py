@@ -18,6 +18,14 @@ def check_and_update_db():
             if not res.fetchone():
                 conn.execute(text("ALTER TABLE loans ADD COLUMN start_date TIMESTAMP WITHOUT TIME ZONE NULL"))
                 print("[Migration] Added start_date column to loans table")
+
+            # Check if original_amount exists in loans
+            res_amount = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='loans' AND column_name='original_amount'"
+            ))
+            if not res_amount.fetchone():
+                conn.execute(text("ALTER TABLE loans ADD COLUMN original_amount DOUBLE PRECISION NULL"))
+                print("[Migration] Added original_amount column to loans table")
             
             res2 = conn.execute(text(
                 "SELECT column_name FROM information_schema.columns WHERE table_name='loans' AND column_name='end_date'"

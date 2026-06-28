@@ -55,6 +55,7 @@ class LoanCreate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     left_amount: Optional[float] = None
+    original_amount: Optional[float] = None
     total_tenure: Optional[int] = None
     paid_tenure: Optional[int] = None
 
@@ -67,6 +68,7 @@ class LoanUpdate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     left_amount: Optional[float] = None
+    original_amount: Optional[float] = None
     total_tenure: Optional[int] = None
     paid_tenure: Optional[int] = None
 
@@ -76,6 +78,7 @@ class LoanResponse(BaseModel):
     type: str
     emi: float
     left: float = Field(..., alias="left_amount")
+    original_amount: Optional[float] = None
     tenure: str
     rate: float
     due: int = Field(..., alias="due_day")
@@ -98,6 +101,7 @@ class LoanResponse(BaseModel):
             type=loan.type,
             emi=loan.emi,
             left_amount=loan.left_amount,
+            original_amount=loan.original_amount,
             tenure=tenure_str,
             rate=loan.rate,
             due_day=loan.due_day,

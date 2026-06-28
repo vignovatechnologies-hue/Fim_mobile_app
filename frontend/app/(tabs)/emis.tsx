@@ -48,6 +48,7 @@ type Loan = {
   paid: boolean;
   start_date?: string;
   end_date?: string;
+  original_amount?: number;
 };
 
 const FILTERS = ["All", "Home", "Personal", "Auto", "Education", "Consumer"] as const;
@@ -238,8 +239,8 @@ export default function EmisPage() {
     }
     setFormTenure(String(totalTenure));
     
-    const principalVal = calculatePrincipal(l.emi, l.rate, totalTenure);
-    setFormAmount(String(principalVal));
+    const principalVal = l.original_amount ? l.original_amount : calculatePrincipal(l.emi, l.rate, totalTenure);
+    setFormAmount(String(Math.round(principalVal)));
     setFormLeftAmount(String(Math.round(l.left)));
 
     setStartDate(l.start_date ? new Date(l.start_date) : new Date());
@@ -288,7 +289,7 @@ export default function EmisPage() {
     // Calculate left amount (Outstanding Balance)
     const elapsedMonths = startDate ? Math.max(0, (new Date().getFullYear() - startDate.getFullYear()) * 12 + (new Date().getMonth() - startDate.getMonth())) : 0;
     const paidTenureVal = Math.min(tenureVal, elapsedMonths);
-    const leftAmountVal = formLeftAmount ? Number(formLeftAmount) : (parsedEmi * (tenureVal - paidTenureVal));
+    const leftAmountVal = formLeftAmount ? Number(formLeftAmount) : Number(formAmount);
 
     const combinedName = `${formLoanName.trim()} (${formLenderName.trim()})`;
 
@@ -309,6 +310,7 @@ export default function EmisPage() {
             start_date: startDate.toISOString(),
             end_date: calculatedEndDate.toISOString(),
             left_amount: leftAmountVal,
+            original_amount: Number(formAmount),
             total_tenure: tenureVal,
             paid_tenure: paidTenureVal,
           }),
@@ -327,6 +329,7 @@ export default function EmisPage() {
             start_date: startDate.toISOString(),
             end_date: calculatedEndDate.toISOString(),
             left_amount: leftAmountVal,
+            original_amount: Number(formAmount),
             total_tenure: tenureVal,
             paid_tenure: paidTenureVal,
           }),
@@ -494,7 +497,7 @@ export default function EmisPage() {
               {/* Progress Slider */}
               <View className="mt-4">
                 <View className="flex-row justify-between text-[10px] text-[#7c8a87] mb-1">
-                  <Text>Outstanding ₹Text{(l.left / 100000).toFixed(1)}L</Text>
+                  <Text>Outstanding ₹{(l.left / 100000).toFixed(1)}L</Text>
                   <Text>{l.tenure} months</Text>
                 </View>
                 <View className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
