@@ -237,15 +237,27 @@ def generate_statement(
     now = datetime.datetime.utcnow()
 
     # ── Build date window ───────────────────────────────────────────────────
+    # ── Build date window ───────────────────────────────────────────────────
+    anchor_date = now
+    if from_iso:
+        try:
+            # Parse the anchor date sent by the client
+            anchor_date = datetime.datetime.fromisoformat(from_iso.replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid date format")
+
     if stmt_range == "day":
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        end   = now
+        start = anchor_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end   = anchor_date.replace(hour=23, minute=59, second=59, microsecond=999999)
     elif stmt_range == "month":
-        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end   = now
+        start = anchor_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        # End of the month calculation
+        next_month = start.replace(day=28) + datetime.timedelta(days=4)
+        last_day = next_month - datetime.timedelta(days=next_month.day)
+        end = last_day.replace(hour=23, minute=59, second=59, microsecond=999999)
     elif stmt_range == "year":
-        start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-        end   = now
+        start = anchor_date.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        end   = anchor_date.replace(month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
     elif stmt_range == "custom" and from_iso and to_iso:
         try:
             start = datetime.datetime.fromisoformat(from_iso.replace("Z", "+00:00")).replace(tzinfo=None)
@@ -303,3 +315,82 @@ def register_fcm_token(
     current_user.fcm_token = payload.fcm_token.strip()
     db.commit()
     return {"message": "FCM token registered successfully"}
+
+
+# ── CREATE Support Ticket ──────────────────────────────────────────────────────
+@router.post("/api/user/support-ticket")
+def create_support_ticket(
+    payload: dict = Body(...),
+    current_user: User = Depends(get_current_user),
+):
+    subject = payload.get("subject", "General Support")
+    message = payload.get("message", "")
+    
+    if not message.strip():
+        raise HTTPException(status_code=400, detail="Message content cannot be empty")
+        
+    from email_utils import send_via_brevo, send_via_smtp, send_via_sendgrid_api
+    from config import settings
+    
+    email_subject = f"[FIM Ticket] {subject} - from {current_user.name}"
+    formatted_message = message.replace('\n', '<br>')
+    html_content = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: sans-serif; color: #333; }}
+            .container {{ padding: 20px; border: 1px solid #ddd; border-radius: 10px; }}
+            .header {{ background-color: #0f4a3f; color: white; padding: 15px; border-radius: 8px 8px 0 0; }}
+            .field {{ margin-bottom: 10px; }}
+            .label {{ font-weight: bold; }}
+            .message-box {{ background-color: #f9f9f9; padding: 15px; border-radius: 5px; border-left: 4px solid #0f4a3f; margin-top: 15px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>New FIM Support Ticket</h2>
+            </div>
+            <div style="padding: 15px;">
+                <div class="field"><span class="label">User Name:</span> {current_user.name}</div>
+                <div class="field"><span class="label">User Email:</span> {current_user.email}</div>
+                <div class="field"><span class="label">User Phone:</span> {current_user.phone or "N/A"}</div>
+                <div class="field"><span class="label">Category / Subject:</span> {subject}</div>
+                
+                <h3>User Message:</h3>
+                <div class="message-box">
+                    {formatted_message}
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    success = False
+    
+    # 1. Try Brevo HTTP API
+    if settings.BREVO_API_KEY and settings.BREVO_FROM_EMAIL:
+        success = send_via_brevo("vignovatechnologies@gmail.com", "Vignova Technologies", email_subject, html_content)
+    
+    # 2. Try SendGrid HTTP API
+    elif settings.SENDGRID_API_KEY and settings.SENDGRID_FROM_EMAIL and not settings.SENDGRID_API_KEY.startswith("SG.YOUR_"):
+        success = send_via_sendgrid_api("vignovatechnologies@gmail.com", "Vignova Technologies", email_subject, html_content)
+        
+    # 3. Try SMTP
+    elif settings.SMTP_HOST and settings.SMTP_FROM_EMAIL:
+        success = send_via_smtp("vignovatechnologies@gmail.com", "Vignova Technologies", email_subject, html_content)
+        
+    # Log to backend console
+    print("\n" + "="*80)
+    print(f"🎟️  [SUPPORT TICKET RAISED]")
+    print(f"From User: {current_user.name} ({current_user.email})")
+    print(f"Subject: {subject}")
+    print(f"Message: {message}")
+    if success:
+        print(f"📧 Sent email to vignovatechnologies@gmail.com")
+    else:
+        print(f"⚠️ Email could not be sent to vignovatechnologies@gmail.com (Email settings not configured).")
+    print("="*80 + "\n")
+    
+    return {"status": "success", "email_sent": success}

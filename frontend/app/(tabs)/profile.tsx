@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Platform
+  Platform,
+  Linking
 } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { EncodingType } from "expo-file-system/legacy";
@@ -22,10 +23,19 @@ import {
   HelpCircle as HelpCircleIcon,
   LogOut as LogOutIcon,
   ChevronRight as ChevronRightOriginal,
+  ChevronLeft as ChevronLeftOriginal,
   Crown as CrownIcon,
   Plus as PlusIcon,
   Download as DownloadIcon,
   Calendar as CalendarIconComponent,
+  Phone as PhoneIcon,
+  Mail as MailIcon,
+  MessageSquare as MessageSquareIcon,
+  Send as SendIcon,
+  CheckCircle as CheckCircleIcon,
+  ChevronDown as ChevronDownIcon,
+  ChevronUp as ChevronUpIcon,
+  MessageCircle as MessageCircleIcon,
 } from "lucide-react-native";
 
 const Shield = ShieldIcon as any;
@@ -36,14 +46,155 @@ const HelpCircle = HelpCircleIcon as any;
 const LogOut = LogOutIcon as any;
 const ChevronRight = ChevronRightOriginal as any;
 const ChevronRightIcon = ChevronRightOriginal as any;
+const ChevronLeft = ChevronLeftOriginal as any;
 const Crown = CrownIcon as any;
 const Plus = PlusIcon as any;
 const Download = DownloadIcon as any;
 const CalendarIcon = CalendarIconComponent as any;
+const Phone = PhoneIcon as any;
+const Mail = MailIcon as any;
+const MessageSquare = MessageSquareIcon as any;
+const Send = SendIcon as any;
+const CheckCircle = CheckCircleIcon as any;
+const ChevronDown = ChevronDownIcon as any;
+const ChevronUp = ChevronUpIcon as any;
+const MessageCircle = MessageCircleIcon as any;
 
 import { useAuth, signOut } from "../../lib/auth";
 import { apiFetch } from "../../lib/api";
 import SmartCalendarModal from "../../components/SmartCalendarModal";
+
+const CustomDropdown = ({
+  value,
+  options,
+  onSelect,
+  isOpen,
+  onToggle,
+  label,
+}: {
+  value: any;
+  options: any[];
+  onSelect: (val: any) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  label?: string;
+}) => {
+  const handlePrev = () => {
+    const currentIndex = options.indexOf(value);
+    if (currentIndex > 0) {
+      onSelect(options[currentIndex - 1]);
+    }
+  };
+
+  const handleNext = () => {
+    const currentIndex = options.indexOf(value);
+    if (currentIndex < options.length - 1) {
+      onSelect(options[currentIndex + 1]);
+    }
+  };
+
+  const hasPrev = options.indexOf(value) > 0;
+  const hasNext = options.indexOf(value) < options.length - 1;
+
+  return (
+    <View className="relative w-full" style={{ width: "100%" }}>
+      <View className="flex-row items-center bg-gray-50 border border-[#e5e7eb] rounded-2xl overflow-hidden">
+        {/* Left Arrow Button */}
+        <TouchableOpacity
+          onPress={handlePrev}
+          disabled={!hasPrev}
+          className="px-3 py-3 border-r border-[#e5e7eb]"
+          style={{ opacity: hasPrev ? 1 : 0.25 }}
+        >
+          <ChevronLeft size={14} color="#7c8a87" />
+        </TouchableOpacity>
+
+        {/* Main Dropdown Button */}
+        <TouchableOpacity
+          onPress={onToggle}
+          className="flex-1 px-4 py-3 flex-row justify-between items-center"
+        >
+          <Text className="text-sm font-bold text-[#0f3a31]" style={{ paddingRight: 6 }}>
+            {value}{" "}
+          </Text>
+          <ChevronDown size={14} color="#7c8a87" />
+        </TouchableOpacity>
+
+        {/* Right Arrow Button */}
+        <TouchableOpacity
+          onPress={handleNext}
+          disabled={!hasNext}
+          className="px-3 py-3 border-l border-[#e5e7eb]"
+          style={{ opacity: hasNext ? 1 : 0.25 }}
+        >
+          <ChevronRight size={14} color="#7c8a87" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Options Selector Modal */}
+      <Modal
+        visible={isOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={onToggle}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={onToggle}
+          className="flex-1 justify-center items-center bg-black/45 px-6"
+        >
+          <View
+            onStartShouldSetResponder={() => true}
+            className="bg-white rounded-3xl w-full max-w-[320px] overflow-hidden shadow-2xl"
+            style={{ maxHeight: "50%" }}
+          >
+            {/* Header */}
+            <View className="px-5 py-3.5 border-b border-gray-100 bg-gray-50 flex-row justify-between items-center">
+              <Text className="text-xs font-bold text-[#0f3a31] uppercase tracking-wider">
+                Select {label || "Option"}
+              </Text>
+              <TouchableOpacity onPress={onToggle}>
+                <Text className="text-xs font-bold text-[#0f4a3f]">Done</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Scrollable List */}
+            <ScrollView
+              className="py-1"
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+            >
+              {options.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  onPress={() => {
+                    onSelect(opt);
+                    onToggle();
+                  }}
+                  className={`px-5 py-3 flex-row justify-between items-center ${
+                    value === opt ? "bg-emerald-50" : ""
+                  }`}
+                >
+                  <Text
+                    className={`text-sm ${
+                      value === opt ? "font-bold text-[#0f4a3f]" : "text-[#7c8a87]"
+                    }`}
+                    style={{ paddingRight: 6 }}
+                  >
+                    {opt}{" "}
+                  </Text>
+                  {value === opt && (
+                    <CheckCircle size={16} color="#0f4a3f" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+};
 
 type Bank = { id: number; name: string; masked: string };
 
@@ -74,9 +225,79 @@ export default function ProfilePage() {
   // Calendar modal
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarTarget, setCalendarTarget] = useState<"from" | "to">("from");
+  const [selectedAnchorDate, setSelectedAnchorDate] = useState<Date>(new Date());
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  const handlePrevPeriod = () => {
+    const next = new Date(selectedAnchorDate);
+    if (range === "day") {
+      next.setDate(next.getDate() - 1);
+    } else if (range === "month") {
+      next.setMonth(next.getMonth() - 1);
+    } else if (range === "year") {
+      next.setFullYear(next.getFullYear() - 1);
+    }
+    setSelectedAnchorDate(next);
+  };
+
+  const handleNextPeriod = () => {
+    const next = new Date(selectedAnchorDate);
+    if (range === "day") {
+      next.setDate(next.getDate() + 1);
+    } else if (range === "month") {
+      next.setMonth(next.getMonth() + 1);
+    } else if (range === "year") {
+      next.setFullYear(next.getFullYear() + 1);
+    }
+    setSelectedAnchorDate(next);
+  };
+
+  // Help & Support
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportSubject, setSupportSubject] = useState("General");
+  const [supportMessage, setSupportMessage] = useState("");
+  const [supportSending, setSupportSending] = useState(false);
+  const [supportSuccess, setSupportSuccess] = useState(false);
+  const [activeFaqIndex, setActiveFaqIndex] = useState<number | null>(null);
+
+  const FAQS = [
+    { q: "How does Smart Pay work?", a: "Smart Pay dynamically schedules your EMIs around your cash inflows to minimize interest charges." },
+    { q: "Can I link multiple bank accounts?", a: "Yes! Go to Account > Linked accounts to add as many banks as you need." },
+    { q: "How long does statement generation take?", a: "Statements are generated in real-time and download instantly in CSV format." },
+    { q: "How do I cancel my Premium subscription?", a: "You can toggle your Premium status at any time directly from the profile screen with a single tap." }
+  ];
+
+  const handleSendSupport = async () => {
+    if (!supportMessage.trim()) {
+      Alert.alert("Input Error", "Please write a message so we can help you.");
+      return;
+    }
+    setSupportSending(true);
+    try {
+      await apiFetch("/api/user/support-ticket", {
+        method: "POST",
+        body: JSON.stringify({
+          subject: supportSubject,
+          message: supportMessage,
+        }),
+      });
+      setSupportMessage("");
+      setSupportSuccess(true);
+      setTimeout(() => {
+        setSupportSuccess(false);
+        setSupportOpen(false);
+      }, 1800);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to send message.");
+    } finally {
+      setSupportSending(false);
+    }
+  };
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const daysOfWeek = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
 
   const fetchBanks = async () => {
     try {
@@ -197,8 +418,8 @@ export default function ProfilePage() {
         method: "POST",
         body: JSON.stringify({
           range,
-          fromDate: fromDate?.toISOString() || null,
-          toDate: toDate?.toISOString() || null,
+          fromDate: range === "custom" ? (fromDate?.toISOString() || null) : selectedAnchorDate.toISOString(),
+          toDate: range === "custom" ? (toDate?.toISOString() || null) : null,
         }),
       });
 
@@ -284,7 +505,7 @@ export default function ProfilePage() {
       title: "Money tools",
       items: [
         { icon: FileText, label: "Reports & statements", note: "", comingSoon: false, onClick: () => setReportsOpen(true) },
-        { icon: HelpCircle, label: "Help & support", note: "", comingSoon: false, onClick: () => Alert.alert("Support Details", "support@fim.in\n+91 1800-FIM-HELP") },
+        { icon: HelpCircle, label: "Help & support", note: "", comingSoon: false, onClick: () => setSupportOpen(true) },
       ],
     },
     {
@@ -317,9 +538,15 @@ export default function ProfilePage() {
                 <Text className="text-[10px] text-emerald-600 font-bold">Premium</Text>
               </View>
             )}
-            <View className="bg-amber-50 px-2 py-0.5 rounded-full">
-              <Text className="text-[10px] text-amber-600 font-bold">KYC - Coming Soon</Text>
-            </View>
+            {user?.verified ? (
+              <View className="bg-emerald-50 px-2 py-0.5 rounded-full">
+                <Text className="text-[10px] text-emerald-600 font-bold">Email Verified</Text>
+              </View>
+            ) : (
+              <View className="bg-amber-50 px-2 py-0.5 rounded-full">
+                <Text className="text-[10px] text-amber-600 font-bold">Email Not Verified</Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -567,16 +794,119 @@ export default function ProfilePage() {
               ))}
             </View>
 
-            {range !== "custom" ? (
-              <View className="bg-gray-50 border border-[#e5e7eb] rounded-2xl p-4 items-center">
-                <Text className="text-[10px] uppercase tracking-wider text-[#7c8a87] font-bold">Current {range}</Text>
-                <Text className="text-base font-extrabold text-[#0f3a31] mt-1">
-                  {range === "day" && new Date().toLocaleDateString("en-IN", { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                  {range === "month" && new Date().toLocaleDateString("en-IN", { month: 'long', year: 'numeric' })}
-                  {range === "year" && new Date().getFullYear()}
-                </Text>
+             {range !== "custom" && (
+              <View className="space-y-4" style={{ zIndex: openDropdown ? 50 : 1 }}>
+                {range === "day" && (
+                  <View className="space-y-3" style={{ zIndex: openDropdown ? 50 : 1 }}>
+                    {/* Day Dropdown */}
+                    <View style={{ zIndex: openDropdown === "day" ? 10 : 1 }}>
+                      <Text className="text-[10px] uppercase tracking-wider text-[#7c8a87] font-bold mb-1">Day</Text>
+                      <CustomDropdown
+                        value={selectedAnchorDate.getDate()}
+                        options={Array.from({ length: 31 }, (_, i) => i + 1)}
+                        isOpen={openDropdown === "day"}
+                        onToggle={() => setOpenDropdown(openDropdown === "day" ? null : "day")}
+                        onSelect={(day) => {
+                          const next = new Date(selectedAnchorDate);
+                          next.setDate(day);
+                          setSelectedAnchorDate(next);
+                        }}
+                        label="Day"
+                      />
+                    </View>
+                    {/* Month Dropdown */}
+                    <View style={{ zIndex: openDropdown === "month" ? 10 : 1 }}>
+                      <Text className="text-[10px] uppercase tracking-wider text-[#7c8a87] font-bold mb-1">Month</Text>
+                      <CustomDropdown
+                        value={months[selectedAnchorDate.getMonth()]}
+                        options={months}
+                        isOpen={openDropdown === "month"}
+                        onToggle={() => setOpenDropdown(openDropdown === "month" ? null : "month")}
+                        onSelect={(monthStr) => {
+                          const next = new Date(selectedAnchorDate);
+                          next.setMonth(months.indexOf(monthStr));
+                          setSelectedAnchorDate(next);
+                        }}
+                        label="Month"
+                      />
+                    </View>
+                    {/* Year Dropdown */}
+                    <View style={{ zIndex: openDropdown === "year" ? 10 : 1 }}>
+                      <Text className="text-[10px] uppercase tracking-wider text-[#7c8a87] font-bold mb-1">Year</Text>
+                      <CustomDropdown
+                        value={selectedAnchorDate.getFullYear()}
+                        options={yearOptions}
+                        isOpen={openDropdown === "year"}
+                        onToggle={() => setOpenDropdown(openDropdown === "year" ? null : "year")}
+                        onSelect={(year) => {
+                          const next = new Date(selectedAnchorDate);
+                          next.setFullYear(year);
+                          setSelectedAnchorDate(next);
+                        }}
+                        label="Year"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {range === "month" && (
+                  <View className="space-y-3" style={{ zIndex: openDropdown ? 50 : 1 }}>
+                    {/* Month Dropdown */}
+                    <View style={{ zIndex: openDropdown === "month" ? 10 : 1 }}>
+                      <Text className="text-[10px] uppercase tracking-wider text-[#7c8a87] font-bold mb-1">Month</Text>
+                      <CustomDropdown
+                        value={months[selectedAnchorDate.getMonth()]}
+                        options={months}
+                        isOpen={openDropdown === "month"}
+                        onToggle={() => setOpenDropdown(openDropdown === "month" ? null : "month")}
+                        onSelect={(monthStr) => {
+                          const next = new Date(selectedAnchorDate);
+                          next.setMonth(months.indexOf(monthStr));
+                          setSelectedAnchorDate(next);
+                        }}
+                        label="Month"
+                      />
+                    </View>
+                    {/* Year Dropdown */}
+                    <View style={{ zIndex: openDropdown === "year" ? 10 : 1 }}>
+                      <Text className="text-[10px] uppercase tracking-wider text-[#7c8a87] font-bold mb-1">Year</Text>
+                      <CustomDropdown
+                        value={selectedAnchorDate.getFullYear()}
+                        options={yearOptions}
+                        isOpen={openDropdown === "year"}
+                        onToggle={() => setOpenDropdown(openDropdown === "year" ? null : "year")}
+                        onSelect={(year) => {
+                          const next = new Date(selectedAnchorDate);
+                          next.setFullYear(year);
+                          setSelectedAnchorDate(next);
+                        }}
+                        label="Year"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {range === "year" && (
+                  <View style={{ zIndex: openDropdown === "year" ? 10 : 1 }}>
+                    <Text className="text-[10px] uppercase tracking-wider text-[#7c8a87] font-bold mb-1">Year</Text>
+                    <CustomDropdown
+                      value={selectedAnchorDate.getFullYear()}
+                      options={yearOptions}
+                      isOpen={openDropdown === "year"}
+                      onToggle={() => setOpenDropdown(openDropdown === "year" ? null : "year")}
+                      onSelect={(year) => {
+                        const next = new Date(selectedAnchorDate);
+                        next.setFullYear(year);
+                        setSelectedAnchorDate(next);
+                      }}
+                      label="Year"
+                    />
+                  </View>
+                )}
               </View>
-            ) : (
+            )}
+
+            {range === "custom" && (
               <View className="flex-row space-x-2">
                 <TouchableOpacity
                   onPress={() => openCalendar("from")}
@@ -646,6 +976,158 @@ export default function ProfilePage() {
                 <Text className="text-xs font-bold text-white">Sign out</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Help & Support Modal */}
+      <Modal
+        visible={supportOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSupportOpen(false)}
+      >
+        <View className="flex-1 justify-end bg-black/60">
+          <View className="bg-white rounded-t-3xl p-6 max-h-[85%]">
+            {/* Header */}
+            <View className="flex-row justify-between items-center mb-4">
+              <View>
+                <Text className="text-xl font-extrabold text-[#0f3a31]">Help & Support</Text>
+                <Text className="text-xs text-[#7c8a87] mt-0.5">We're here to help you 24/7</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setSupportOpen(false)}
+                className="bg-gray-100 px-3 py-1.5 rounded-full"
+              >
+                <Text className="text-[#7c8a87] text-xs font-bold">Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Quick Contact Grid */}
+              <View className="flex-row space-x-2 mt-2">
+                <TouchableOpacity
+                  className="flex-1 bg-emerald-50 border border-emerald-100 rounded-2xl p-3 items-center flex-row justify-center space-x-2"
+                  onPress={() => {
+                    Linking.openURL("https://wa.me/9118003464357?text=Hi%20FIM%20Support%20Team,%20I%20need%20help%20with%20my%20account.");
+                  }}
+                >
+                  <MessageCircle size={16} color="#059669" />
+                  <Text className="text-emerald-700 font-bold text-xs">WhatsApp</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  className="flex-1 bg-blue-50 border border-blue-100 rounded-2xl p-3 items-center flex-row justify-center space-x-2"
+                  onPress={() => {
+                    Linking.openURL("tel:+9118003464357");
+                  }}
+                >
+                  <Phone size={16} color="#2563eb" />
+                  <Text className="text-blue-700 font-bold text-xs">Call Us</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  className="flex-1 bg-purple-50 border border-purple-100 rounded-2xl p-3 items-center flex-row justify-center space-x-2"
+                  onPress={() => {
+                    Linking.openURL(`mailto:vignovatechnologies@gmail.com?subject=FIM Support Ticket Request [${supportSubject}]&body=Hi FIM Support Team,\n\nI need assistance with: \n\n[Please describe your issue here]\n\nRegards,\n${user?.name || "User"}`);
+                  }}
+                >
+                  <Mail size={16} color="#7c3aed" />
+                  <Text className="text-purple-700 font-bold text-xs">Email</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Dynamic Ticket Form */}
+              <View className="bg-gray-50 border border-[#e5e7eb] rounded-2xl p-4 mt-4">
+                <Text className="text-xs font-bold text-[#0f3a31] mb-2.5">Send a Message</Text>
+
+                {/* Subject Selector */}
+                <View className="flex-row space-x-1.5 mb-3">
+                  {["General", "Transactions", "Premium", "Refinance"].map((sub) => (
+                    <TouchableOpacity
+                      key={sub}
+                      onPress={() => setSupportSubject(sub)}
+                      className={`px-3 py-1.5 rounded-xl border ${supportSubject === sub
+                          ? "bg-[#0f4a3f] border-[#0f4a3f]"
+                          : "bg-white border-[#e5e7eb]"
+                        }`}
+                    >
+                      <Text className={`text-[10px] font-extrabold ${supportSubject === sub ? "text-white" : "text-[#7c8a87]"
+                        }`}>
+                        {sub}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Message Input */}
+                <View className="bg-white border border-[#e5e7eb] rounded-xl p-3 min-h-[90px] justify-between">
+                  <TextInput
+                    placeholder="Type your issue or query here..."
+                    placeholderTextColor="#9ca3af"
+                    multiline
+                    value={supportMessage}
+                    onChangeText={setSupportMessage}
+                    className="text-xs text-[#0f3a31] flex-1"
+                    style={{ textAlignVertical: "top" }}
+                  />
+                </View>
+
+                {/* Submit Button */}
+                <TouchableOpacity
+                  onPress={handleSendSupport}
+                  disabled={supportSending || supportSuccess}
+                  className={`mt-3 py-3 rounded-xl flex-row justify-center items-center space-x-2 ${supportSuccess
+                      ? "bg-emerald-500"
+                      : "bg-[#0f4a3f]"
+                    }`}
+                >
+                  {supportSending ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : supportSuccess ? (
+                    <>
+                      <CheckCircle size={14} color="#ffffff" />
+                      <Text className="text-white font-bold text-xs">Message Sent!</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={12} color="#ffffff" />
+                      <Text className="text-white font-bold text-xs">Submit Ticket</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* FAQs Section */}
+              <View className="mt-4 mb-6">
+                <Text className="text-xs font-extrabold text-[#0f3a31] mb-3">Frequently Asked Questions</Text>
+                <View className="space-y-2">
+                  {FAQS.map((faq, idx) => {
+                    const isOpen = activeFaqIndex === idx;
+                    return (
+                      <View
+                        key={idx}
+                        className={`border rounded-2xl overflow-hidden mb-2 ${isOpen ? "bg-white border-[#0f4a3f]/30 shadow-sm" : "bg-white border-[#e5e7eb]"
+                          }`}
+                      >
+                        <TouchableOpacity
+                          onPress={() => setActiveFaqIndex(isOpen ? null : idx)}
+                          className="p-4 flex-row justify-between items-center"
+                        >
+                          <Text className={`text-xs font-bold pr-4 flex-1 ${isOpen ? "text-[#0f4a3f]" : "text-[#0f3a31]"}`}>{faq.q}</Text>
+                          {isOpen ? <ChevronUp size={14} color="#0f4a3f" /> : <ChevronDown size={14} color="#7c8a87" />}
+                        </TouchableOpacity>
+                        {isOpen && (
+                          <View className="px-4 pb-4 pt-3 border-t border-[#f3f4f6] bg-[#f9fafb]">
+                            <Text className="text-xs text-[#4b5563] leading-relaxed font-medium">{faq.a}</Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
