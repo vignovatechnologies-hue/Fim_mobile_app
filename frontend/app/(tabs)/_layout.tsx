@@ -33,7 +33,9 @@ export default function TabsLayout() {
           borderBottomWidth: 1,
           borderBottomColor: "#1a2c26",
           elevation: 0,
-          shadowOpacity: 0,
+          ...Platform.select({
+            default: { shadowOpacity: 0 },
+          }),
         },
         headerTitleStyle: {
           color: "#ffffff",

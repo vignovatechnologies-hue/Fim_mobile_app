@@ -10,6 +10,9 @@ import {
   Modal,
   Platform
 } from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import { EncodingType } from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import { useRouter } from "expo-router";
 import {
   Shield as ShieldIcon,
@@ -189,7 +192,8 @@ export default function ProfilePage() {
     setLoading(true);
     setReportsOpen(false);
     try {
-      const res = await apiFetch("/api/user/statement", {
+      console.log("[Statement] Step 1: calling API...");
+      const res = await apiFetch<{ status: string; filename: string; csv_content: string; row_count: number }>("/api/user/statement", {
         method: "POST",
         body: JSON.stringify({
           range,
@@ -197,9 +201,53 @@ export default function ProfilePage() {
           toDate: toDate?.toISOString() || null,
         }),
       });
-      Alert.alert("Statement Generated", `Successfully prepared statement:\n${res.filename}`);
+
+      console.log("[Statement] Step 2: API response —", "status:", res.status, "filename:", res.filename, "rows:", res.row_count, "csv_content length:", res.csv_content?.length);
+
+      if (!res.csv_content) {
+        Alert.alert("No Data", "No transactions found for the selected period.");
+        return;
+      }
+
+      if (Platform.OS === "web") {
+        // ── Web: trigger a browser file download via Blob ──
+        console.log("[Statement] Step 3 (web): creating Blob and triggering download");
+        const blob = new Blob([res.csv_content], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = res.filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+        console.log("[Statement] Step 4 (web): download triggered for", res.filename);
+      } else {
+        // ── Native (iOS / Android): write to cache then share ──
+        const fileUri = (FileSystem.cacheDirectory ?? "") + res.filename;
+        console.log("[Statement] Step 3 (native): writing file to", fileUri);
+        await FileSystem.writeAsStringAsync(fileUri, res.csv_content, {
+          encoding: EncodingType.UTF8,
+        });
+        console.log("[Statement] Step 4 (native): file written successfully");
+
+        const canShare = await Sharing.isAvailableAsync();
+        console.log("[Statement] Step 5 (native): canShare =", canShare);
+        if (canShare) {
+          console.log("[Statement] Step 6 (native): opening share sheet...");
+          await Sharing.shareAsync(fileUri, {
+            mimeType: "text/csv",
+            dialogTitle: "Save your FIM Statement",
+            UTI: "public.comma-separated-values-text",
+          });
+          console.log("[Statement] Step 7 (native): share sheet closed.");
+        } else {
+          Alert.alert("Statement Ready", `File saved at:\n${fileUri}`);
+        }
+      }
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to generate statement");
+      console.error("[Statement] ERROR:", err);
+      Alert.alert("Download Error", err.message || "Failed to generate statement");
     } finally {
       setLoading(false);
     }
@@ -227,23 +275,23 @@ export default function ProfilePage() {
     {
       title: "Account",
       items: [
-        { icon: Shield, label: "Security & KYC", note: "Verified", onClick: () => Alert.alert("KYC Status", "KYC Verified ✓ (PAN, Aadhaar & bank linked)") },
-        { icon: CreditCard, label: "Linked accounts", note: `${banks.length} banks`, onClick: () => setBanksOpen(true) },
-        { icon: Bell, label: "Notifications", note: "", onClick: () => Alert.alert("Notifications", "You are fully up to date.") },
+        { icon: Shield, label: "Security & KYC", note: "", comingSoon: true, onClick: () => Alert.alert("Coming Soon", "Secure & KYC verification will be available soon.") },
+        { icon: CreditCard, label: "Linked accounts", note: "", comingSoon: true, onClick: () => Alert.alert("Coming Soon", "Bank account linking will be available soon.") },
+        { icon: Bell, label: "Notifications", note: "", comingSoon: false, onClick: () => Alert.alert("Notifications", "You are fully up to date.") },
       ],
     },
     {
       title: "Money tools",
       items: [
-        { icon: FileText, label: "Reports & statements", note: "", onClick: () => setReportsOpen(true) },
-        { icon: HelpCircle, label: "Help & support", note: "", onClick: () => Alert.alert("Support Details", "support@fim.in\n+91 1800-FIM-HELP") },
+        { icon: FileText, label: "Reports & statements", note: "", comingSoon: false, onClick: () => setReportsOpen(true) },
+        { icon: HelpCircle, label: "Help & support", note: "", comingSoon: false, onClick: () => Alert.alert("Support Details", "support@fim.in\n+91 1800-FIM-HELP") },
       ],
     },
     {
       title: "Legal",
       items: [
-        { icon: Shield, label: "Privacy Policy", note: "", onClick: () => router.push("/privacy-policy") },
-        { icon: FileText, label: "Terms of Use", note: "", onClick: () => router.push("/terms-of-use") },
+        { icon: Shield, label: "Privacy Policy", note: "", comingSoon: false, onClick: () => router.push("/privacy-policy") },
+        { icon: FileText, label: "Terms of Use", note: "", comingSoon: false, onClick: () => router.push("/terms-of-use") },
       ],
     },
   ];
@@ -316,7 +364,13 @@ export default function ProfilePage() {
                     <Text className="text-sm font-bold text-[#0f3a31]">{item.label}</Text>
                   </View>
                   <View className="flex-row items-center">
-                    {item.note ? <Text className="text-xs text-[#7c8a87] mr-1.5 font-bold">{item.note}</Text> : null}
+                    {item.comingSoon ? (
+                      <View className="bg-amber-100 px-2 py-0.5 rounded-full mr-1.5">
+                        <Text className="text-[10px] font-extrabold text-amber-600">Coming Soon</Text>
+                      </View>
+                    ) : item.note ? (
+                      <Text className="text-xs text-[#7c8a87] mr-1.5 font-bold">{item.note}</Text>
+                    ) : null}
                     <ChevronRight size={14} color="#7c8a87" />
                   </View>
                 </TouchableOpacity>
@@ -418,14 +472,12 @@ export default function ProfilePage() {
                     <TouchableOpacity
                       key={b}
                       onPress={() => setNewBankName(b)}
-                      className={`px-3 py-1.5 rounded-xl ${
-                        newBankName === b ? "bg-[#0f4a3f] shadow-sm" : "bg-transparent"
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl ${newBankName === b ? "bg-[#0f4a3f] shadow-sm" : "bg-transparent"
+                        }`}
                     >
                       <Text
-                        className={`text-[10px] font-bold ${
-                          newBankName === b ? "text-white" : "text-[#7c8a87]"
-                        }`}
+                        className={`text-[10px] font-bold ${newBankName === b ? "text-white" : "text-[#7c8a87]"
+                          }`}
                       >
                         {b}
                       </Text>
@@ -500,9 +552,8 @@ export default function ProfilePage() {
                 <TouchableOpacity
                   key={r}
                   onPress={() => setRange(r)}
-                  className={`flex-grow flex-1 py-2 items-center rounded-xl ${
-                    range === r ? "bg-white shadow-sm" : ""
-                  }`}
+                  className={`flex-grow flex-1 py-2 items-center rounded-xl ${range === r ? "bg-white shadow-sm" : ""
+                    }`}
                 >
                   <Text className={`text-xs font-bold ${range === r ? "text-[#0f3a31]" : "text-[#7c8a87]"}`}>
                     {r}

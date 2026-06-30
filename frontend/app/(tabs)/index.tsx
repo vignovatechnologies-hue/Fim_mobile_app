@@ -590,8 +590,10 @@ const s = StyleSheet.create({
   balanceCard: {
     backgroundColor: C.primary, borderRadius: 28, padding: 24,
     overflow: "hidden", position: "relative",
-    shadowColor: C.primary, shadowOpacity: 0.35, shadowRadius: 20, shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    ...Platform.select({
+      web: { boxShadow: `0px 8px 20px 0px ${C.primary}59` },
+      default: { shadowColor: C.primary, shadowOpacity: 0.35, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+    }),
   },
   deco1: {
     position: "absolute", top: -50, right: -50,
@@ -616,8 +618,10 @@ const s = StyleSheet.create({
     backgroundColor: C.surface, borderRadius: 24, padding: 16,
     flexDirection: "row", alignItems: "center", gap: 14,
     borderWidth: 1, borderColor: C.border,
-    shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    ...Platform.select({
+      web: { boxShadow: "0px 3px 10px 0px rgba(0,0,0,0.06)" },
+      default: { shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+    }),
   },
   smartPayIcon: {
     width: 50, height: 50, borderRadius: 16,
@@ -631,8 +635,10 @@ const s = StyleSheet.create({
   statCard: {
     width: "47.5%", backgroundColor: C.surface, borderRadius: 20, padding: 16,
     borderWidth: 1, borderColor: C.border,
-    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    ...Platform.select({
+      web: { boxShadow: "0px 2px 8px 0px rgba(0,0,0,0.05)" },
+      default: { shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+    }),
   },
   statIconWrap: { width: 38, height: 38, borderRadius: 12, justifyContent: "center", alignItems: "center" },
   statValue: { fontSize: 26, fontWeight: "800", color: C.primaryMid, marginTop: 12 },
@@ -649,8 +655,10 @@ const s = StyleSheet.create({
     width: 52, height: 52, borderRadius: 18,
     backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
     justifyContent: "center", alignItems: "center", marginBottom: 6,
-    shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    ...Platform.select({
+      web: { boxShadow: "0px 2px 6px 0px rgba(0,0,0,0.05)" },
+      default: { shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+    }),
   },
   quickLabel: { fontSize: 10, fontWeight: "600", color: C.muted, textAlign: "center" },
 
@@ -665,8 +673,10 @@ const s = StyleSheet.create({
     flexDirection: "row", alignItems: "center",
     backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
     borderRadius: 20, padding: 14, marginBottom: 10,
-    shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    ...Platform.select({
+      web: { boxShadow: "0px 2px 6px 0px rgba(0,0,0,0.04)" },
+      default: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+    }),
   },
   emiLogo: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#f3f4f6", justifyContent: "center", alignItems: "center" },
   emiName: { fontSize: 14, fontWeight: "700", color: C.primaryMid },
