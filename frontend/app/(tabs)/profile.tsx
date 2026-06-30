@@ -311,10 +311,15 @@ export default function ProfilePage() {
         <View className="ml-4 flex-1">
           <Text className="text-lg font-bold text-[#0f3a31]">{user?.name || "Guest"}</Text>
           <Text className="text-xs text-[#7c8a87] font-semibold">{user?.email}{user?.phone ? ` · ${user.phone}` : ""}</Text>
-          <View className="bg-emerald-50 self-start px-2 py-0.5 rounded-full mt-1.5">
-            <Text className="text-[10px] text-emerald-600 font-bold">
-              {premium ? "Premium · KYC Verified" : "KYC Verified"}
-            </Text>
+          <View className="flex-row gap-1.5 mt-1.5">
+            {premium && (
+              <View className="bg-emerald-50 px-2 py-0.5 rounded-full">
+                <Text className="text-[10px] text-emerald-600 font-bold">Premium</Text>
+              </View>
+            )}
+            <View className="bg-amber-50 px-2 py-0.5 rounded-full">
+              <Text className="text-[10px] text-amber-600 font-bold">KYC - Coming Soon</Text>
+            </View>
           </View>
         </View>
       </View>
