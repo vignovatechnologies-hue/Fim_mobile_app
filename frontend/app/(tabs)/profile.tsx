@@ -90,12 +90,10 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: DARK_GREEN,
     borderRadius: 20,
-    paddingVertical: 24,
+    paddingVertical: 18,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    flexDirection: 'column',
+    alignItems: 'stretch',
     marginTop: 16,
     ...Platform.select({
       ios: {
@@ -112,6 +110,19 @@ const styles = StyleSheet.create({
         boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
       },
     }),
+  },
+  cardHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: GOLD,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  cardBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   leftSection: {
     flexDirection: 'row',
@@ -146,8 +157,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     gap: 6,
   },
   pill: {
@@ -179,28 +190,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   rightSection: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     gap: 10,
     flexShrink: 0,
   },
   priceBlock: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   priceText: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '800',
     color: GOLD,
-    letterSpacing: -0.5,
-    lineHeight: 28,
+    letterSpacing: -0.4,
+    lineHeight: 22,
   },
   pricePer: {
-    fontSize: 12,
-    fontWeight: '400',
+    fontSize: 10.5,
+    fontWeight: '500',
     color: 'rgba(245,215,110,0.55)',
   },
   priceSub: {
-    fontSize: 9,
-    color: TEXT_DIM,
+    fontSize: 10,
+    fontWeight: '700',
+    color: TEXT_MUTED,
     marginTop: 2,
   },
   badge: {
@@ -919,43 +931,43 @@ export default function ProfilePage() {
 
       {/* Premium upgrade promo */}
       <View style={styles.card}>
-        {/* ── Left ── */}
-        <View style={styles.leftSection}>
-          {/* Icon badge */}
-          <View style={styles.iconWrap}>
-            <Text style={styles.iconEmoji}>👑</Text>
-          </View>
+        <Text style={styles.cardHeaderTitle}>FIM Premium</Text>
+        <View style={styles.cardBody}>
+          {/* ── Left ── */}
+          <View style={styles.leftSection}>
+            {/* Icon badge */}
+            <View style={styles.iconWrap}>
+              <Text style={styles.iconEmoji}>👑</Text>
+            </View>
 
-          {/* Text content */}
-          <View style={styles.textBlock}>
-            <Text style={styles.title}>FIM Premium</Text>
-            <Text style={styles.subtitle}>
-              Unlimited Smart Pay · AI advisor · Refinance alerts
-            </Text>
-            <View style={styles.pillsRow}>
-              <FeaturePill label="Smart Pay" />
-              <FeaturePill label="AI Advisor" />
-              <FeaturePill label="Refinance Alerts" />
+            {/* Text content */}
+            <View style={styles.textBlock}>
+              <View style={styles.pillsRow}>
+                <FeaturePill label="Smart Pay" />
+                <FeaturePill label="AI Advisor" />
+                <FeaturePill label="Refinance Alerts" />
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* ── Divider ── */}
-        <View style={styles.divider} />
+          {/* ── Divider ── */}
+          <View style={styles.divider} />
 
-        {/* ── Right ── */}
-        <View style={styles.rightSection}>
-          <View style={styles.priceBlock}>
-            <Text style={styles.priceText}>
-              ₹199
-              <Text style={styles.pricePer}>/mo</Text>
-            </Text>
-            <Text style={styles.priceSub}>Billed monthly · Cancel anytime</Text>
-          </View>
+          {/* ── Right ── */}
+          <View style={styles.rightSection}>
+            <View style={styles.priceBlock}>
+              <Text style={styles.priceText}>
+                ₹199<Text style={styles.pricePer}>/Month</Text>
+              </Text>
+              <Text style={[styles.priceText, { marginTop: 3 }]}>
+                ₹999<Text style={styles.pricePer}>/Year</Text>
+              </Text>
+            </View>
 
-          <View style={styles.badge}>
-            <PulsingDot />
-            <Text style={styles.badgeText}>COMING SOON</Text>
+            <View style={styles.badge}>
+              <PulsingDot />
+              <Text style={styles.badgeText}>COMING SOON</Text>
+            </View>
           </View>
         </View>
       </View>

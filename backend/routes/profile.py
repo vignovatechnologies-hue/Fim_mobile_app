@@ -140,7 +140,8 @@ def serialize_user(user) -> dict:
         phone=user.phone,
         initials=initials,
         verified=user.verified,
-        premium=user.premium
+        premium=user.premium,
+        photo_data=user.photo_data
     )
     return r.model_dump()
 
@@ -154,6 +155,19 @@ def get_profile(current_user: User = Depends(get_current_user)):
 @router.post("/api/user/premium")
 def toggle_premium(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     current_user.premium = not current_user.premium
+    db.commit()
+    db.refresh(current_user)
+    return JSONResponse(serialize_user(current_user))
+
+
+@router.post("/api/user/photo")
+def update_photo(
+    payload: dict = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    photo_data = payload.get("photo_data")
+    current_user.photo_data = photo_data
     db.commit()
     db.refresh(current_user)
     return JSONResponse(serialize_user(current_user))

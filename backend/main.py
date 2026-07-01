@@ -41,6 +41,14 @@ def check_and_update_db():
             if not res3.fetchone():
                 conn.execute(text("ALTER TABLE users ADD COLUMN fcm_token VARCHAR(255) NULL"))
                 print("[Migration] Added fcm_token column to users table")
+
+            # Check if photo_data exists in users
+            res4 = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='photo_data'"
+            ))
+            if not res4.fetchone():
+                conn.execute(text("ALTER TABLE users ADD COLUMN photo_data TEXT NULL"))
+                print("[Migration] Added photo_data column to users table")
     except Exception as e:
         print(f"[Migration] Error updating database tables: {e}")
 

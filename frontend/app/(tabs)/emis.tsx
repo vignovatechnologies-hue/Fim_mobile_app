@@ -33,6 +33,7 @@ const ChevronRight = ChevronRightIcon as any;
 const ChevronDown = ChevronDownIcon as any;
 
 import { apiFetch } from "../../lib/api";
+import { useFocusEffect } from "expo-router";
 import SmartCalendarModal from "../../components/SmartCalendarModal";
 
 type Loan = {
@@ -131,9 +132,11 @@ export default function EmisPage() {
     }
   };
 
-  useEffect(() => {
-    fetchLoans();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchLoans();
+    }, [])
+  );
 
   const calculateTenure = (start: Date | null, end: Date | null) => {
     if (!start || !end) return "24 months";

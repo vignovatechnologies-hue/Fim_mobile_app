@@ -13,7 +13,7 @@ import {
   Animated,
   StyleSheet,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import {
   Bell as BellIcon,
   ArrowUpRight as ArrowUpRightIcon,
@@ -141,7 +141,11 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData();
+    }, [])
+  );
 
   const handleSendChat = async () => {
     const q = chatInput.trim();
@@ -286,7 +290,7 @@ export default function Dashboard() {
           <View style={s.deco1} />
           <View style={s.deco2} />
 
-          <Text style={s.balanceLabel}>Net Balance this month</Text>
+          <Text style={s.balanceLabel}>Net Balance</Text>
           <Text style={s.balanceAmount}>₹ {summary.net_balance.toLocaleString("en-IN")}</Text>
 
           <View style={s.balanceRow}>
@@ -340,10 +344,12 @@ export default function Dashboard() {
       <View style={[s.px, s.statsGrid]}>
         {statCards.map((card, i) => (
           <TouchableOpacity key={i} onPress={card.action} style={s.statCard} activeOpacity={0.82}>
-            <View style={[s.statIconWrap, { backgroundColor: card.iconBg }]}>
-              <card.icon size={16} color={card.iconColor} />
+            <View style={s.statHeaderRow}>
+              <View style={[s.statIconWrap, { backgroundColor: card.iconBg }]}>
+                <card.icon size={16} color={card.iconColor} />
+              </View>
+              <Text style={s.statValue}>{card.value}</Text>
             </View>
-            <Text style={s.statValue}>{card.value}</Text>
             <Text style={s.statLabel}>{card.label}</Text>
             <Text style={s.statSub} numberOfLines={1}>{card.sub}</Text>
           </TouchableOpacity>
@@ -631,19 +637,20 @@ const s = StyleSheet.create({
   smartPaySub: { fontSize: 12, color: C.muted, marginTop: 2 },
 
   // Stat cards
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: 18, gap: 12 },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: 14, gap: 10 },
   statCard: {
-    width: "47.5%", backgroundColor: C.surface, borderRadius: 20, padding: 16,
+    width: "47.8%", backgroundColor: C.surface, borderRadius: 16, padding: 12,
     borderWidth: 1, borderColor: C.border,
     ...Platform.select({
-      web: { boxShadow: "0px 2px 8px 0px rgba(0,0,0,0.05)" },
-      default: { shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+      web: { boxShadow: "0px 2px 6px 0px rgba(0,0,0,0.04)" },
+      default: { shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
     }),
   },
-  statIconWrap: { width: 38, height: 38, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  statValue: { fontSize: 26, fontWeight: "800", color: C.primaryMid, marginTop: 12 },
-  statLabel: { fontSize: 11, color: C.muted, fontWeight: "700", marginTop: 2 },
-  statSub: { fontSize: 10, color: C.mutedLighter, marginTop: 2 },
+  statHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  statIconWrap: { width: 30, height: 30, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  statValue: { fontSize: 20, fontWeight: "800", color: C.primaryMid },
+  statLabel: { fontSize: 10, color: C.muted, fontWeight: "700", marginTop: 2 },
+  statSub: { fontSize: 9, color: C.mutedLighter, marginTop: 2 },
 
   // Quick actions
   sectionTitle: { fontSize: 14, fontWeight: "800", color: C.primaryMid, marginBottom: 14 },

@@ -1,6 +1,7 @@
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from database import get_db
 from models import Transaction, User
@@ -9,12 +10,27 @@ from dependencies import get_current_user
 router = APIRouter(tags=["income"])
 
 @router.get("/api/income")
-def get_income_sources(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    txns = db.query(Transaction).filter(
+def get_income_sources(
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Transaction).filter(
         Transaction.user_id == current_user.id,
         Transaction.category == "Income",
         Transaction.amount > 0
-    ).order_by(Transaction.when.desc()).all()
+    )
+    
+    if month is not None and year is not None:
+        start_of_month = datetime.datetime(year, month, 1)
+        if month == 12:
+            end_of_month = datetime.datetime(year + 1, 1, 1)
+        else:
+            end_of_month = datetime.datetime(year, month + 1, 1)
+        query = query.filter(Transaction.when >= start_of_month, Transaction.when < end_of_month)
+        
+    txns = query.order_by(Transaction.when.desc()).all()
     
     colors = {
         "Salary": "bg-emerald-100 text-emerald-700",

@@ -29,7 +29,18 @@ def get_dashboard_summary(current_user: User = Depends(get_current_user), db: Se
     ).all()
     spent = sum([abs(t.amount) for t in spent_txns])
 
-    net_balance = max(0.0, income - spent)
+    all_income = sum([t.amount for t in db.query(Transaction).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.category == "Income",
+        Transaction.amount > 0
+    ).all()])
+
+    all_spent = sum([abs(t.amount) for t in db.query(Transaction).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.amount < 0
+    ).all()])
+
+    net_balance = all_income - all_spent
 
     loans = db.query(Loan).filter(Loan.user_id == current_user.id).all()
     active_loans_count = len(loans)

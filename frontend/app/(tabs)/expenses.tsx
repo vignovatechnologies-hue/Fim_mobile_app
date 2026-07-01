@@ -106,7 +106,7 @@ export default function ExpensesPage() {
 
   const fetchData = async (m: number, y: number) => {
     try {
-      const txnsData = await apiFetch<Txn[]>("/api/transactions");
+      const txnsData = await apiFetch<Txn[]>(`/api/transactions?month=${m}&year=${y}`);
       setTxns(txnsData);
 
       const budgetsData = await apiFetch<BudgetCategory[]>(`/api/budgets?month=${m}&year=${y}`);
@@ -155,16 +155,27 @@ export default function ExpensesPage() {
     }
   };
 
-  const handleSaveBudgets = () => {
-    setCats((prev) =>
-      prev.map((c) => ({
-        ...c,
-        budget: budgetDraft[c.name] ? Number(budgetDraft[c.name]) : c.budget,
-      }))
-    );
+  const handleSaveBudgets = async () => {
+    const payload: Record<string, number> = {};
+    cats.forEach((c) => {
+      payload[c.name] = budgetDraft[c.name] ? Number(budgetDraft[c.name]) : c.budget;
+    });
+
+    setLoading(true);
     setBudgetModalOpen(false);
-    setBudgetDraft({});
-    Alert.alert("Saved", "Monthly budgets updated!");
+    
+    try {
+      await apiFetch("/api/budgets", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      setBudgetDraft({});
+      Alert.alert("Saved", "Monthly budgets updated successfully!");
+      fetchData(selectedMonth, selectedYear);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to update budgets");
+      setLoading(false);
+    }
   };
 
   const totalSpent = cats.reduce((s, c) => s + c.spent, 0);

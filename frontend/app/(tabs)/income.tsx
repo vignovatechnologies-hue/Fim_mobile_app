@@ -18,7 +18,9 @@ import {
   Laptop as LaptopIcon,
   TrendingUp as TrendingUpIcon,
   Pencil as PencilIcon,
-  Trash2 as Trash2Icon
+  Trash2 as Trash2Icon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from "lucide-react-native";
 
 const Plus = PlusIcon as any;
@@ -27,8 +29,16 @@ const Laptop = LaptopIcon as any;
 const TrendingUp = TrendingUpIcon as any;
 const Pencil = PencilIcon as any;
 const Trash2 = Trash2Icon as any;
+const ChevronLeft = ChevronLeftIcon as any;
+const ChevronRight = ChevronRightIcon as any;
 
 import { apiFetch } from "../../lib/api";
+import { useFocusEffect } from "expo-router";
+
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 type Src = {
   id: number;
@@ -61,9 +71,30 @@ export default function IncomePage() {
   const [formType, setFormType] = useState("Salary");
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
 
-  const fetchIncome = async () => {
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  const handlePrevMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear((y) => y - 1);
+    } else {
+      setSelectedMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear((y) => y + 1);
+    } else {
+      setSelectedMonth((m) => m + 1);
+    }
+  };
+
+  const fetchIncome = async (m: number, y: number) => {
     try {
-      const data = await apiFetch<any[]>("/api/income");
+      const data = await apiFetch<any[]>(`/api/income?month=${m}&year=${y}`);
       const mapped = data.map((item) => ({
         ...item,
         icon: iconMap[item.type] || Briefcase,
@@ -76,9 +107,11 @@ export default function IncomePage() {
     }
   };
 
-  useEffect(() => {
-    fetchIncome();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchIncome(selectedMonth, selectedYear);
+    }, [selectedMonth, selectedYear])
+  );
 
   const handleOpenAdd = () => {
     setEditingIncome(null);
@@ -134,7 +167,7 @@ export default function IncomePage() {
       setFormAmount("");
       setFormType("Salary");
       setEditingIncome(null);
-      fetchIncome();
+      fetchIncome(selectedMonth, selectedYear);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to save income source");
       setLoading(false);
@@ -153,7 +186,7 @@ export default function IncomePage() {
     try {
       await apiFetch(`/api/income/${incomeToDelete.id}`, { method: "DELETE" });
       Alert.alert("Success", "Income source deleted successfully");
-      fetchIncome();
+      fetchIncome(selectedMonth, selectedYear);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to delete income source");
       setLoading(false);
@@ -176,7 +209,17 @@ export default function IncomePage() {
       <View className="px-5 pt-6 pb-3 flex-row items-center justify-between">
         <View>
           <Text className="text-2xl font-extrabold text-[#0f3a31]">Income</Text>
-          <Text className="text-xs text-[#7c8a87] font-semibold">All sources</Text>
+          <View className="flex-row items-center mt-1" style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 4, borderRadius: 999, backgroundColor: '#f3f4f6', marginRight: 6 }}>
+              <ChevronLeft size={13} color="#0f3a31" />
+            </TouchableOpacity>
+            <Text className="text-xs text-[#7c8a87] font-extrabold min-w-[75px] text-center">
+              {months[selectedMonth - 1]} {selectedYear}
+            </Text>
+            <TouchableOpacity onPress={handleNextMonth} style={{ padding: 4, borderRadius: 999, backgroundColor: '#f3f4f6', marginLeft: 6 }}>
+              <ChevronRight size={13} color="#0f3a31" />
+            </TouchableOpacity>
+          </View>
         </View>
         <TouchableOpacity
           onPress={handleOpenAdd}

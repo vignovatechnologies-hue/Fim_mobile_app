@@ -29,6 +29,7 @@ class UserResponse(BaseModel):
     initials: str
     verified: bool
     premium: bool
+    photo_data: Optional[str] = None
 
     class Config:
         from_attributes = True

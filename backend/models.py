@@ -18,6 +18,7 @@ class User(Base):
     reset_expires = Column(DateTime, nullable=True)
     premium = Column(Boolean, default=False)
     fcm_token = Column(String, nullable=True)
+    photo_data = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     loans = relationship("Loan", back_populates="user", cascade="all, delete-orphan")

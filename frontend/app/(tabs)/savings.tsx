@@ -19,7 +19,9 @@ import {
   GraduationCap as GraduationCapIcon,
   Home as HomeIcon,
   Pencil as PencilIcon,
-  Trash2 as Trash2Icon
+  Trash2 as Trash2Icon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from "lucide-react-native";
 
 const Plus = PlusIcon as any;
@@ -29,8 +31,16 @@ const GraduationCap = GraduationCapIcon as any;
 const Home = HomeIcon as any;
 const Pencil = PencilIcon as any;
 const Trash2 = Trash2Icon as any;
+const ChevronLeft = ChevronLeftIcon as any;
+const ChevronRight = ChevronRightIcon as any;
 
 import { apiFetch } from "../../lib/api";
+import { useFocusEffect } from "expo-router";
+
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 type Goal = {
   id: number;
@@ -54,6 +64,7 @@ export default function SavingsPage() {
   const router = useRouter();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [monthlySaved, setMonthlySaved] = useState(0);
   
   // Modals
   const [addGoalOpen, setAddGoalOpen] = useState(false);
@@ -65,14 +76,43 @@ export default function SavingsPage() {
   const [formName, setFormName] = useState("");
   const [formTarget, setFormTarget] = useState("");
 
-  const fetchGoals = async () => {
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  const handlePrevMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear((y) => y - 1);
+    } else {
+      setSelectedMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear((y) => y + 1);
+    } else {
+      setSelectedMonth((m) => m + 1);
+    }
+  };
+
+  const fetchGoals = async (m: number, y: number) => {
     try {
+      // 1. Fetch Goals
       const data = await apiFetch<any[]>("/api/savings");
       const mapped = data.map((item) => ({
         ...item,
         icon: getIcon(item.name),
       }));
       setGoals(mapped);
+
+      // 2. Fetch monthly transactions to calculate monthly saved
+      const txns = await apiFetch<any[]>(`/api/transactions?month=${m}&year=${y}`);
+      const savedSum = txns
+        .filter((t) => t.category === "Savings")
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+      setMonthlySaved(savedSum);
     } catch (err: any) {
       Alert.alert("Error", "Failed to load savings goals");
     } finally {
@@ -80,9 +120,11 @@ export default function SavingsPage() {
     }
   };
 
-  useEffect(() => {
-    fetchGoals();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchGoals(selectedMonth, selectedYear);
+    }, [selectedMonth, selectedYear])
+  );
 
   const handleOpenAdd = () => {
     setEditingGoal(null);
@@ -130,7 +172,7 @@ export default function SavingsPage() {
       setFormName("");
       setFormTarget("");
       setEditingGoal(null);
-      fetchGoals();
+      fetchGoals(selectedMonth, selectedYear);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to save savings goal");
       setLoading(false);
@@ -149,7 +191,7 @@ export default function SavingsPage() {
     try {
       await apiFetch(`/api/savings/${goalToDelete.id}`, { method: "DELETE" });
       Alert.alert("Success", "Goal deleted successfully");
-      fetchGoals();
+      fetchGoals(selectedMonth, selectedYear);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to delete goal");
       setLoading(false);
@@ -173,7 +215,7 @@ export default function SavingsPage() {
         body: JSON.stringify({ amount: amt }),
       });
       Alert.alert("Added Money", `Added ₹${amt.toLocaleString("en-IN")} to ${targetGoal.name}`);
-      fetchGoals();
+      fetchGoals(selectedMonth, selectedYear);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to add money");
       setLoading(false);
@@ -196,7 +238,17 @@ export default function SavingsPage() {
       <View className="px-5 pt-6 pb-3 flex-row items-center justify-between">
         <View>
           <Text className="text-2xl font-extrabold text-[#0f3a31]">Savings</Text>
-          <Text className="text-xs text-[#7c8a87] font-semibold">Goals & funds</Text>
+          <View className="flex-row items-center mt-1" style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 4, borderRadius: 999, backgroundColor: '#f3f4f6', marginRight: 6 }}>
+              <ChevronLeft size={13} color="#0f3a31" />
+            </TouchableOpacity>
+            <Text className="text-xs text-[#7c8a87] font-extrabold min-w-[75px] text-center">
+              {months[selectedMonth - 1]} {selectedYear}
+            </Text>
+            <TouchableOpacity onPress={handleNextMonth} style={{ padding: 4, borderRadius: 999, backgroundColor: '#f3f4f6', marginLeft: 6 }}>
+              <ChevronRight size={13} color="#0f3a31" />
+            </TouchableOpacity>
+          </View>
         </View>
         <TouchableOpacity
           onPress={handleOpenAdd}
@@ -230,9 +282,9 @@ export default function SavingsPage() {
       {/* Total Saved Card */}
       <View className="px-5 mt-5">
         <View className="bg-amber-100 rounded-3xl p-6 relative overflow-hidden shadow-sm">
-          <Text className="text-xs uppercase tracking-wider text-amber-800 font-bold">Total saved</Text>
-          <Text className="text-3xl font-extrabold text-amber-900 mt-1">₹ {(totalSaved / 100000).toFixed(2)}L</Text>
-          <Text className="text-xs text-amber-800/80 mt-1 font-semibold">Across {goals.length} goals · auto-saving ₹18,000/mo</Text>
+          <Text className="text-xs uppercase tracking-wider text-amber-800 font-bold">Saved in {months[selectedMonth - 1]} {selectedYear}</Text>
+          <Text className="text-3xl font-extrabold text-amber-900 mt-1">₹ {monthlySaved.toLocaleString("en-IN")}</Text>
+          <Text className="text-xs text-amber-800/80 mt-1 font-semibold">Overall Total Saved: ₹ {totalSaved.toLocaleString("en-IN")} across {goals.length} goals</Text>
         </View>
       </View>
 

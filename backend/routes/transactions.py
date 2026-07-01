@@ -1,5 +1,5 @@
 import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -34,16 +34,23 @@ def _serialize_txn(txn) -> dict:
     return TransactionResponse.from_orm_model(txn).model_dump()   # outputs {id, name, cat, amount, when}
 
 
-# ── GET all transactions ───────────────────────────────────────────────────────
 @router.get("/api/transactions")
-def get_transactions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    txns = (
-        db.query(Transaction)
-        .filter(Transaction.user_id == current_user.id)
-        .order_by(Transaction.when.desc())
-        .limit(100)
-        .all()
-    )
+def get_transactions(
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+    if month is not None and year is not None:
+        start_of_month = datetime.datetime(year, month, 1)
+        if month == 12:
+            end_of_month = datetime.datetime(year + 1, 1, 1)
+        else:
+            end_of_month = datetime.datetime(year, month + 1, 1)
+        query = query.filter(Transaction.when >= start_of_month, Transaction.when < end_of_month)
+        
+    txns = query.order_by(Transaction.when.desc()).limit(100).all()
     return JSONResponse([_serialize_txn(t) for t in txns])
 
 
@@ -116,3 +123,30 @@ def get_budgets(
         })
 
     return JSONResponse(result)
+
+
+# ── POST /api/budgets to update user budgets ─────────────────────────────────
+@router.post("/api/budgets")
+def update_user_budgets(
+    payload: dict = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    for category, amount in payload.items():
+        budget = db.query(Budget).filter(
+            Budget.user_id == current_user.id,
+            Budget.category == category
+        ).first()
+        
+        if budget:
+            budget.budget_amount = float(amount)
+        else:
+            new_budget = Budget(
+                user_id=current_user.id,
+                category=category,
+                budget_amount=float(amount)
+            )
+            db.add(new_budget)
+            
+    db.commit()
+    return JSONResponse({"status": "success", "message": "Budgets updated successfully"})
