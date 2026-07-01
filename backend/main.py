@@ -78,8 +78,8 @@ def on_startup():
     from init_db import seed_database
     Base.metadata.create_all(bind=engine)
     print("[Startup] Database tables created/verified.")
-    seed_database()
     check_and_update_db()
+    seed_database()
     import asyncio
     asyncio.create_task(start_reminder_scheduler())
 
