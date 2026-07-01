@@ -45,20 +45,12 @@ def send_fcm_notification(fcm_token: str, recipient_name: str, title: str, body:
         print(f"[Firebase Push] ✅ Notification sent successfully to {recipient_name}: {response}")
         return True
     except Exception as e:
-        # Fallback console print for development
-        print("\n" + "="*60)
-        print(f"🔔 [FIREBASE PUSH MOCK FALLBACK]")
-        print(f"To: {recipient_name} (token: {fcm_token})")
-        print(f"Title: {title}")
-        print(f"Body: {body}")
-        print(f"Details: {e}")
-        print("💡 Place Firebase service account file at FIREBASE_CREDENTIALS_PATH in backend/.env for real delivery.")
-        print("="*60 + "\n")
-        return True
+        print(f"[Firebase Push] Push skipped (FCM not configured/auth error: {e})")
+        return False
 
 def send_sms(phone: str, recipient_name: str, body: str) -> bool:
     """
-    Sends an SMS using Twilio API or falls back to console logs if credentials are not set.
+    Sends an SMS using Twilio API or logs warning if credentials are not set.
     """
     if settings.TWILIO_ACCOUNT_SID and settings.TWILIO_AUTH_TOKEN and settings.TWILIO_FROM_NUMBER:
         url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}/Messages.json"
@@ -80,14 +72,8 @@ def send_sms(phone: str, recipient_name: str, body: str) -> bool:
             print(f"[Twilio SMS] ❌ Exception sending SMS: {e}")
             return False
     else:
-        # Fallback console print for development
-        print("\n" + "="*60)
-        print(f"📱 [SMS MOCK FALLBACK]")
-        print(f"To: {recipient_name} ({phone})")
-        print(f"Message: {body}")
-        print("💡 Config TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER in backend/.env for real delivery.")
-        print("="*60 + "\n")
-        return True
+        print("[SMS] Twilio credentials not configured. SMS skipped.")
+        return False
 
 def send_emi_reminder_email(to_email: str, recipient_name: str, loan_name: str, emi_amount: float, left_amount: float, due_date_str: str, days_left: int) -> bool:
     """
