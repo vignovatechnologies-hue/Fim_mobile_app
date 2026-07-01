@@ -2,6 +2,7 @@ import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from database import get_db
 from models import Transaction, Budget, User
@@ -75,11 +76,23 @@ def add_transaction(
 
 # ── GET budgets with real spent amounts ───────────────────────────────────────
 @router.get("/api/budgets")
-def get_budgets(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_budgets(
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     budgets = db.query(Budget).filter(Budget.user_id == current_user.id).all()
 
     now = datetime.datetime.utcnow()
-    start_of_month = datetime.datetime(now.year, now.month, 1)
+    m = month if month is not None else now.month
+    y = year if year is not None else now.year
+
+    start_of_month = datetime.datetime(y, m, 1)
+    if m == 12:
+        end_of_month = datetime.datetime(y + 1, 1, 1)
+    else:
+        end_of_month = datetime.datetime(y, m + 1, 1)
 
     result = []
     for b in budgets:
@@ -89,6 +102,7 @@ def get_budgets(current_user: User = Depends(get_current_user), db: Session = De
                 Transaction.user_id == current_user.id,
                 Transaction.category == b.category,
                 Transaction.when >= start_of_month,
+                Transaction.when < end_of_month,
                 Transaction.amount < 0,
             )
             .all()

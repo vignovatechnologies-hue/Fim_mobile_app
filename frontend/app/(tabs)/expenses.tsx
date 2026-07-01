@@ -22,7 +22,9 @@ import {
   ShoppingBag as ShoppingBagIcon,
   Car as CarIcon,
   Film as FilmIcon,
-  Home as HomeIcon
+  Home as HomeIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from "lucide-react-native";
 
 const Plus = PlusIcon as any;
@@ -33,8 +35,15 @@ const ShoppingBag = ShoppingBagIcon as any;
 const Car = CarIcon as any;
 const Film = FilmIcon as any;
 const Home = HomeIcon as any;
+const ChevronLeft = ChevronLeftIcon as any;
+const ChevronRight = ChevronRightIcon as any;
 
 import { apiFetch } from "../../lib/api";
+
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 type Txn = {
   id: number;
@@ -74,12 +83,33 @@ export default function ExpensesPage() {
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [budgetDraft, setBudgetDraft] = useState<Record<string, string>>({});
 
-  const fetchData = async () => {
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+
+  const handlePrevMonth = () => {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear((y) => y - 1);
+    } else {
+      setSelectedMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear((y) => y + 1);
+    } else {
+      setSelectedMonth((m) => m + 1);
+    }
+  };
+
+  const fetchData = async (m: number, y: number) => {
     try {
       const txnsData = await apiFetch<Txn[]>("/api/transactions");
       setTxns(txnsData);
 
-      const budgetsData = await apiFetch<BudgetCategory[]>("/api/budgets");
+      const budgetsData = await apiFetch<BudgetCategory[]>(`/api/budgets?month=${m}&year=${y}`);
       const mapped = budgetsData.map((b) => ({
         ...b,
         icon: iconMap[b.name] || Home,
@@ -93,8 +123,8 @@ export default function ExpensesPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(selectedMonth, selectedYear);
+  }, [selectedMonth, selectedYear]);
 
   const handleAddExpense = async () => {
     const amt = Number(formAmount);
@@ -118,7 +148,7 @@ export default function ExpensesPage() {
       Alert.alert("Logged", `Logged ₹${amt} under ${formCat}`);
       setFormName("");
       setFormAmount("");
-      fetchData();
+      fetchData(selectedMonth, selectedYear);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to log expense");
       setLoading(false);
@@ -154,7 +184,17 @@ export default function ExpensesPage() {
       <View className="px-5 pt-6 pb-3 flex-row items-center justify-between">
         <View>
           <Text className="text-2xl font-extrabold text-[#0f3a31]">Money</Text>
-          <Text className="text-xs text-[#7c8a87] font-semibold">June 2026</Text>
+          <View className="flex-row items-center mt-1" style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 4, borderRadius: 999, backgroundColor: '#f3f4f6', marginRight: 6 }}>
+              <ChevronLeft size={13} color="#0f3a31" />
+            </TouchableOpacity>
+            <Text className="text-xs text-[#7c8a87] font-extrabold min-w-[75px] text-center">
+              {months[selectedMonth - 1]} {selectedYear}
+            </Text>
+            <TouchableOpacity onPress={handleNextMonth} style={{ padding: 4, borderRadius: 999, backgroundColor: '#f3f4f6', marginLeft: 6 }}>
+              <ChevronRight size={13} color="#0f3a31" />
+            </TouchableOpacity>
+          </View>
         </View>
         <TouchableOpacity
           onPress={() => setModalOpen(true)}

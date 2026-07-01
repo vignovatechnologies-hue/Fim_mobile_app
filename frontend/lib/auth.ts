@@ -10,6 +10,7 @@ export type FimUser = {
   initials: string;
   verified?: boolean;
   premium?: boolean;
+  photo_data?: string;
 };
 
 export async function getCurrentUser(): Promise<FimUser | null> {

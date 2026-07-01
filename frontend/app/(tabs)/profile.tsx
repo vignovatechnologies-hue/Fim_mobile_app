@@ -9,11 +9,15 @@ import {
   Alert,
   Modal,
   Platform,
-  Linking
+  Linking,
+  Image,
+  Animated,
+  StyleSheet
 } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { EncodingType } from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
 import {
   Shield as ShieldIcon,
@@ -36,6 +40,8 @@ import {
   ChevronDown as ChevronDownIcon,
   ChevronUp as ChevronUpIcon,
   MessageCircle as MessageCircleIcon,
+  Camera as CameraIcon,
+  Star as StarIcon,
 } from "lucide-react-native";
 
 const Shield = ShieldIcon as any;
@@ -59,10 +65,219 @@ const CheckCircle = CheckCircleIcon as any;
 const ChevronDown = ChevronDownIcon as any;
 const ChevronUp = ChevronUpIcon as any;
 const MessageCircle = MessageCircleIcon as any;
+const Camera = CameraIcon as any;
+const Star = StarIcon as any;
+const AnimatedView = Animated.View as any;
 
 import { useAuth, signOut } from "../../lib/auth";
-import { apiFetch } from "../../lib/api";
+import { apiFetch, USER_KEY, notifyAuthChange } from "../../lib/api";
 import SmartCalendarModal from "../../components/SmartCalendarModal";
+
+const DARK_GREEN = '#0D2B22';
+const GOLD = '#F5D76E';
+const GOLD_MID = '#C9A227';
+const GREEN_ACCENT = '#6DCF94';
+const TEXT_PRIMARY = '#F0ECD8';
+const TEXT_MUTED = 'rgba(240,236,216,0.55)';
+const TEXT_DIM = 'rgba(240,236,216,0.4)';
+const PILL_BG = 'rgba(255,255,255,0.07)';
+const PILL_BORDER = 'rgba(255,255,255,0.12)';
+const DIVIDER = 'rgba(255,255,255,0.08)';
+const GREEN_BADGE_BG = 'rgba(109,207,148,0.12)';
+const GREEN_BADGE_BORDER = 'rgba(109,207,148,0.3)';
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: DARK_GREEN,
+    borderRadius: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        // @ts-ignore
+        boxShadow: '0 6px 24px rgba(0,0,0,0.25)',
+      },
+    }),
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  iconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: GOLD_MID,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  iconEmoji: {
+    fontSize: 22,
+  },
+  textBlock: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: TEXT_PRIMARY,
+    marginBottom: 2,
+  },
+  subtitle: {
+    fontSize: 11,
+    color: TEXT_MUTED,
+    marginBottom: 8,
+  },
+  pillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: PILL_BG,
+    borderWidth: 0.5,
+    borderColor: PILL_BORDER,
+    borderRadius: 20,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  pillDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: GREEN_ACCENT,
+  },
+  pillText: {
+    fontSize: 9,
+    color: 'rgba(240,236,216,0.7)',
+  },
+  divider: {
+    width: 1,
+    height: 52,
+    backgroundColor: DIVIDER,
+    flexShrink: 0,
+    marginHorizontal: 8,
+  },
+  rightSection: {
+    alignItems: 'flex-end',
+    gap: 10,
+    flexShrink: 0,
+  },
+  priceBlock: {
+    alignItems: 'flex-end',
+  },
+  priceText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: GOLD,
+    letterSpacing: -0.5,
+    lineHeight: 28,
+  },
+  pricePer: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: 'rgba(245,215,110,0.55)',
+  },
+  priceSub: {
+    fontSize: 9,
+    color: TEXT_DIM,
+    marginTop: 2,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: GREEN_BADGE_BG,
+    borderWidth: 1,
+    borderColor: GREEN_BADGE_BORDER,
+    borderRadius: 20,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: GREEN_ACCENT,
+  },
+  badgeText: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: GREEN_ACCENT,
+    letterSpacing: 1,
+  },
+});
+
+const PulsingDot = () => {
+  const scale = React.useRef(new Animated.Value(1)).current;
+  const opacity = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(scale, {
+            toValue: 0.55,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 0.25,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(scale, {
+            toValue: 1,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 900,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
+
+  return (
+    <AnimatedView
+      style={[styles.pulseDot, { transform: [{ scale }], opacity }]}
+    />
+  );
+};
+
+const FeaturePill = ({ label }: { label: string }) => (
+  <View style={styles.pill}>
+    <View style={styles.pillDot} />
+    <Text style={styles.pillText}>{label}</Text>
+  </View>
+);
 
 const CustomDropdown = ({
   value,
@@ -205,6 +420,7 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [premium, setPremium] = useState(user?.premium || false);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
 
   // Linked banks
   const [banks, setBanks] = useState<Bank[]>([]);
@@ -332,6 +548,138 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePickPhoto = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["image/jpeg", "image/png"],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      
+      // Validation size limit of 2MB
+      const maxSize = 2 * 1024 * 1024; // 2MB
+      if (asset.size && asset.size > maxSize) {
+        if (Platform.OS === "web") {
+          window.alert("File Too Large: The selected file is larger than 2MB. Please choose a smaller file.");
+        } else {
+          Alert.alert("File Too Large", "The selected file is larger than 2MB. Please choose a smaller file.");
+        }
+        return;
+      }
+
+      // Verify extension is jpg or png
+      const extension = asset.name.split('.').pop()?.toLowerCase();
+      if (!extension || !["jpg", "jpeg", "png"].includes(extension)) {
+        if (Platform.OS === "web") {
+          window.alert("Invalid File Type: Only JPG and PNG files are allowed.");
+        } else {
+          Alert.alert("Invalid File Type", "Only JPG and PNG files are allowed.");
+        }
+        return;
+      }
+
+      setLoading(true);
+
+      let dataUri = "";
+      if (Platform.OS === "web") {
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        dataUri = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else {
+        const base64Content = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const mimeType = asset.mimeType || `image/${extension === "png" ? "png" : "jpeg"}`;
+        dataUri = `data:${mimeType};base64,${base64Content}`;
+      }
+
+      // Upload to backend
+      const updatedUser = await apiFetch<any>("/api/user/photo", {
+        method: "POST",
+        body: JSON.stringify({ photo_data: dataUri }),
+      });
+
+      // Save to AsyncStorage and notify listeners
+      const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+      notifyAuthChange();
+      
+      if (Platform.OS === "web") {
+        window.alert("Profile photo uploaded successfully!");
+      } else {
+        Alert.alert("Success", "Profile photo uploaded successfully!");
+      }
+    } catch (err: any) {
+      console.log("Error uploading photo:", err);
+      if (Platform.OS === "web") {
+        window.alert(err.message || "Failed to upload photo.");
+      } else {
+        Alert.alert("Upload Error", err.message || "Failed to upload photo.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    const performRemove = async () => {
+      setLoading(true);
+      try {
+        const updatedUser = await apiFetch<any>("/api/user/photo", {
+          method: "POST",
+          body: JSON.stringify({ photo_data: null }),
+        });
+        const AsyncStorage = require("@react-native-async-storage/async-storage").default;
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+        notifyAuthChange();
+        if (Platform.OS === "web") {
+          window.alert("Profile photo has been removed.");
+        } else {
+          Alert.alert("Removed", "Profile photo has been removed.");
+        }
+      } catch (err: any) {
+        if (Platform.OS === "web") {
+          window.alert(err.message || "Failed to remove profile photo");
+        } else {
+          Alert.alert("Error", err.message || "Failed to remove profile photo");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm("Are you sure you want to remove your profile photo?")) {
+        performRemove();
+      }
+    } else {
+      Alert.alert(
+        "Remove Photo",
+        "Are you sure you want to remove your profile photo?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Remove", style: "destructive", onPress: performRemove },
+        ]
+      );
+    }
+  };
+
+  const handleAvatarPress = () => {
+    setPhotoModalOpen(true);
   };
 
   const handleLinkBank = async () => {
@@ -526,9 +874,27 @@ export default function ProfilePage() {
 
       {/* User Info Card */}
       <View className="bg-white border border-[#e5e7eb] rounded-3xl p-5 flex-row items-center shadow-sm">
-        <View className="w-16 h-16 rounded-[20px] bg-[#0f4a3f] justify-center items-center">
-          <Text className="text-white font-extrabold text-xl">{user?.initials || "FI"}</Text>
-        </View>
+        <TouchableOpacity
+          onPress={handleAvatarPress}
+          activeOpacity={0.8}
+          className="relative w-16 h-16 rounded-[20px] justify-center items-center shadow-sm"
+        >
+          {user?.photo_data ? (
+            <Image
+              source={{ uri: user.photo_data }}
+              className="w-full h-full rounded-[20px] border border-[#0f4a3f]/10"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="w-full h-full rounded-[20px] bg-[#0f4a3f] justify-center items-center">
+              <Text className="text-white font-extrabold text-xl">{user?.initials || "FI"}</Text>
+            </View>
+          )}
+          {/* Camera overlay badge */}
+          <View className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#0d6e59] justify-center items-center border border-white shadow">
+            <Camera size={11} color="white" />
+          </View>
+        </TouchableOpacity>
         <View className="ml-4 flex-1">
           <Text className="text-lg font-bold text-[#0f3a31]">{user?.name || "Guest"}</Text>
           <Text className="text-xs text-[#7c8a87] font-semibold">{user?.email}{user?.phone ? ` · ${user.phone}` : ""}</Text>
@@ -552,24 +918,44 @@ export default function ProfilePage() {
       </View>
 
       {/* Premium upgrade promo */}
-      <View className="bg-[#0f4a3f] rounded-3xl p-5 mt-4 relative overflow-hidden shadow-lg">
-        <View className="flex-row items-start">
-          <View className="w-10 h-10 rounded-xl bg-amber-100 justify-center items-center mr-3">
-            <Crown size={20} color="#f59e0b" fill="#f59e0b" />
+      <View style={styles.card}>
+        {/* ── Left ── */}
+        <View style={styles.leftSection}>
+          {/* Icon badge */}
+          <View style={styles.iconWrap}>
+            <Text style={styles.iconEmoji}>👑</Text>
           </View>
-          <View className="flex-1">
-            <Text className="font-bold text-white text-base">FIM Premium</Text>
-            <Text className="text-xs text-white/80 mt-1 font-semibold">
-              {premium ? "Active · renews in 30 days" : "Unlimited Smart Pay, AI advisor, refinance alerts — ₹199/mo"}
+
+          {/* Text content */}
+          <View style={styles.textBlock}>
+            <Text style={styles.title}>FIM Premium</Text>
+            <Text style={styles.subtitle}>
+              Unlimited Smart Pay · AI advisor · Refinance alerts
             </Text>
-            <TouchableOpacity
-              onPress={togglePremiumStatus}
-              className="mt-4 bg-white rounded-full py-2 px-4 self-start"
-            >
-              <Text className="text-[#0f3a31] text-xs font-extrabold">
-                {premium ? "Deactivate Premium" : "Try 30 days free"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.pillsRow}>
+              <FeaturePill label="Smart Pay" />
+              <FeaturePill label="AI Advisor" />
+              <FeaturePill label="Refinance Alerts" />
+            </View>
+          </View>
+        </View>
+
+        {/* ── Divider ── */}
+        <View style={styles.divider} />
+
+        {/* ── Right ── */}
+        <View style={styles.rightSection}>
+          <View style={styles.priceBlock}>
+            <Text style={styles.priceText}>
+              ₹199
+              <Text style={styles.pricePer}>/mo</Text>
+            </Text>
+            <Text style={styles.priceSub}>Billed monthly · Cancel anytime</Text>
+          </View>
+
+          <View style={styles.badge}>
+            <PulsingDot />
+            <Text style={styles.badgeText}>COMING SOON</Text>
           </View>
         </View>
       </View>
@@ -943,6 +1329,57 @@ export default function ProfilePage() {
               >
                 <Download size={14} color="#ffffff" />
                 <Text className="text-white font-bold text-xs">Download</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Profile Photo Management Modal */}
+      <Modal
+        visible={photoModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPhotoModalOpen(false)}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-white rounded-t-3xl p-6">
+            <Text className="text-lg font-bold text-[#0f3a31] mb-1">Profile Photo</Text>
+            <Text className="text-xs text-[#7c8a87] mb-5">
+              Upload a profile photo (JPG, PNG) under 2MB.
+            </Text>
+
+            <View className="space-y-3">
+              <TouchableOpacity
+                onPress={() => {
+                  setPhotoModalOpen(false);
+                  handlePickPhoto();
+                }}
+                className="w-full py-4.5 bg-[#0f4a3f] rounded-2xl justify-center items-center shadow-sm"
+                style={{ paddingVertical: 14 }}
+              >
+                <Text className="text-white font-bold text-sm">Upload New Photo</Text>
+              </TouchableOpacity>
+
+              {user?.photo_data ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setPhotoModalOpen(false);
+                    handleRemovePhoto();
+                  }}
+                  className="w-full py-4.5 bg-red-50 rounded-2xl justify-center items-center border border-red-200"
+                  style={{ paddingVertical: 14, marginTop: 10 }}
+                >
+                  <Text className="text-red-600 font-bold text-sm">Remove Current Photo</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              <TouchableOpacity
+                onPress={() => setPhotoModalOpen(false)}
+                className="w-full py-4.5 bg-gray-100 rounded-2xl justify-center items-center"
+                style={{ paddingVertical: 14, marginTop: 10 }}
+              >
+                <Text className="text-[#7c8a87] font-bold text-sm">Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
