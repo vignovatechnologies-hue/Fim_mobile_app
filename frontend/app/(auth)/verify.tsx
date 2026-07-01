@@ -35,6 +35,12 @@ export default function VerifyPage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
   if (!ready) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f9fafb" }}>
@@ -42,12 +48,6 @@ export default function VerifyPage() {
       </View>
     );
   }
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooldown]);
 
   const setDigit = (i: number, val: string) => {
     const cleanVal = val.replace(/\D/g, "").slice(-1);
