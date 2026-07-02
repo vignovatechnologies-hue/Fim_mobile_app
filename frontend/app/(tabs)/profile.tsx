@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
   Linking,
   Image,
   Animated,
-  StyleSheet
+  StyleSheet,
+  Switch
 } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { EncodingType } from "expo-file-system/legacy";
@@ -22,6 +23,7 @@ import { useRouter } from "expo-router";
 import {
   Shield as ShieldIcon,
   Bell as BellIcon,
+  AlarmClock as AlarmClockIcon,
   CreditCard as CreditCardIcon,
   FileText as FileTextIcon,
   HelpCircle as HelpCircleIcon,
@@ -541,9 +543,28 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setPremium(user.premium || false);
+      setRemindersEnabled(user.reminders_enabled !== false); // default true
       fetchBanks();
     }
   }, [user]);
+
+  // ── Reminder toggle ────────────────────────────────────────────────────────
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [reminderToggling, setReminderToggling] = useState(false);
+
+  const handleToggleReminders = async () => {
+    setReminderToggling(true);
+    try {
+      const updated = await apiFetch<{ reminders_enabled: boolean }>("/api/user/reminders", {
+        method: "POST",
+      });
+      setRemindersEnabled(updated.reminders_enabled);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to update reminder settings.");
+    } finally {
+      setReminderToggling(false);
+    }
+  };
 
   const togglePremiumStatus = async () => {
     setLoading(true);
@@ -856,23 +877,24 @@ export default function ProfilePage() {
     {
       title: "Account",
       items: [
-        { icon: Shield, label: "Security & KYC", note: "", comingSoon: true, onClick: () => Alert.alert("Coming Soon", "Secure & KYC verification will be available soon.") },
-        { icon: CreditCard, label: "Linked accounts", note: "", comingSoon: true, onClick: () => Alert.alert("Coming Soon", "Bank account linking will be available soon.") },
-        { icon: Bell, label: "Notifications", note: "", comingSoon: false, onClick: () => Alert.alert("Notifications", "You are fully up to date.") },
+        { icon: Shield, label: "Security & KYC", note: "", comingSoon: true, isToggle: false, onClick: () => Alert.alert("Coming Soon", "Secure & KYC verification will be available soon.") },
+        { icon: CreditCard, label: "Linked accounts", note: "", comingSoon: true, isToggle: false, onClick: () => Alert.alert("Coming Soon", "Bank account linking will be available soon.") },
+        { icon: AlarmClockIcon, label: "Reminders", note: "", comingSoon: false, isToggle: true, onClick: handleToggleReminders },
+        { icon: Bell, label: "Notifications", note: "", comingSoon: false, isToggle: false, onClick: () => Alert.alert("Notifications", "You are fully up to date.") },
       ],
     },
     {
       title: "Money tools",
       items: [
-        { icon: FileText, label: "Reports & statements", note: "", comingSoon: false, onClick: () => setReportsOpen(true) },
-        { icon: HelpCircle, label: "Help & support", note: "", comingSoon: false, onClick: () => setSupportOpen(true) },
+        { icon: FileText, label: "Reports & statements", note: "", comingSoon: false, isToggle: false, onClick: () => setReportsOpen(true) },
+        { icon: HelpCircle, label: "Help & support", note: "", comingSoon: false, isToggle: false, onClick: () => setSupportOpen(true) },
       ],
     },
     {
       title: "Legal",
       items: [
-        { icon: Shield, label: "Privacy Policy", note: "", comingSoon: false, onClick: () => router.push("/privacy-policy") },
-        { icon: FileText, label: "Terms of Use", note: "", comingSoon: false, onClick: () => router.push("/terms-of-use") },
+        { icon: Shield, label: "Privacy Policy", note: "", comingSoon: false, isToggle: false, onClick: () => router.push("/privacy-policy") },
+        { icon: FileText, label: "Terms of Use", note: "", comingSoon: false, isToggle: false, onClick: () => router.push("/terms-of-use") },
       ],
     },
   ];
@@ -981,7 +1003,45 @@ export default function ProfilePage() {
           <View className="bg-white border border-[#e5e7eb] rounded-3xl overflow-hidden shadow-sm">
             {g.items.map((item, itemIdx) => {
               const Icon = item.icon;
-              return (
+              const isReminderRow = item.isToggle;
+              return isReminderRow ? (
+                /* ── Reminder toggle row ── */
+                <TouchableOpacity
+                  key={itemIdx}
+                  onPress={item.onClick}
+                  activeOpacity={0.7}
+                  className="flex-row items-center justify-between px-4 py-3.5 border-b border-[#f3f4f6]"
+                >
+                  <View className="flex-row items-center flex-1">
+                    <View
+                      className="w-9 h-9 rounded-xl justify-center items-center mr-3"
+                      style={{ backgroundColor: remindersEnabled ? "#ecfdf5" : "#f3f4f6" }}
+                    >
+                      <Icon size={16} color={remindersEnabled ? "#059669" : "#9ca3af"} />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-[#0f3a31]">{item.label}</Text>
+                      <Text className="text-[10px] text-[#7c8a87] mt-0.5">
+                        {remindersEnabled
+                          ? "EMI alerts via email, SMS & push"
+                          : "Alerts are muted"}
+                      </Text>
+                    </View>
+                  </View>
+                  {reminderToggling ? (
+                    <ActivityIndicator size="small" color="#059669" />
+                  ) : (
+                    <Switch
+                      value={remindersEnabled}
+                      onValueChange={item.onClick}
+                      trackColor={{ false: "#d1d5db", true: "#6ee7b7" }}
+                      thumbColor={remindersEnabled ? "#059669" : "#9ca3af"}
+                      ios_backgroundColor="#d1d5db"
+                    />
+                  )}
+                </TouchableOpacity>
+              ) : (
+                /* ── Normal row with chevron ── */
                 <TouchableOpacity
                   key={itemIdx}
                   onPress={item.onClick}

@@ -29,6 +29,7 @@ class UserResponse(BaseModel):
     initials: str
     verified: bool
     premium: bool
+    reminders_enabled: bool = True
     photo_data: Optional[str] = None
 
     class Config:

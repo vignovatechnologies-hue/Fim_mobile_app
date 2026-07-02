@@ -75,11 +75,22 @@ def send_sms(phone: str, recipient_name: str, body: str) -> bool:
         print("[SMS] Twilio credentials not configured. SMS skipped.")
         return False
 
+def _due_phrase(days_left: int) -> str:
+    """Return a human-readable due phrase based on days remaining."""
+    if days_left <= 0:
+        return "due today"
+    elif days_left == 1:
+        return "due tomorrow"
+    else:
+        return f"due in {days_left} days"
+
+
 def send_emi_reminder_email(to_email: str, recipient_name: str, loan_name: str, emi_amount: float, left_amount: float, due_date_str: str, days_left: int) -> bool:
     """
     Sends a premium, beautifully styled HTML email reminder.
     """
-    subject = f"EMI Reminder: {loan_name} due in {days_left} days"
+    due_phrase = _due_phrase(days_left)
+    subject = f"EMI Reminder: {loan_name} {due_phrase}"
     
     html_content = f"""
     <!DOCTYPE html>
@@ -193,7 +204,7 @@ def send_emi_reminder_email(to_email: str, recipient_name: str, loan_name: str, 
             <div class="content">
                 <p class="greeting">Hi {recipient_name},</p>
                 <p class="text">
-                    This is a reminder that your EMI payment for <strong>{loan_name}</strong> is due in {days_left} days. Please make the payment to keep your health score optimal.
+                    This is a reminder that your EMI payment for <strong>{loan_name}</strong> is {due_phrase}. Please make the payment to keep your health score optimal.
                 </p>
                 <div class="details-card">
                     <div class="detail-row">
@@ -260,6 +271,10 @@ def check_and_send_reminders(db: Session) -> dict:
         user = db.query(User).filter(User.id == loan.user_id).first()
         if not user:
             continue
+
+        # Skip users who have opted out of reminders
+        if user.reminders_enabled is False:
+            continue
             
         due_day = loan.due_day
         # Determine target due date in the current month
@@ -291,7 +306,8 @@ def check_and_send_reminders(db: Session) -> dict:
                 
             # Send SMS
             phone_num = user.phone or "+91 99999 99999"  # default placeholder if user has no phone number
-            sms_body = f"Dear {user.name}, your EMI of Rs.{loan.emi:,.0f} for {loan.name} is due on {due_date_str} (in {max(0, days_left)} days). Please pay soon via FIM to avoid late charges. - FIM"
+            due_phrase = _due_phrase(days_left)
+            sms_body = f"Dear {user.name}, your EMI of Rs.{loan.emi:,.0f} for {loan.name} is {due_phrase} (on {due_date_str}). Please pay soon via FIM to avoid late charges. - FIM"
             
             sms_success = send_sms(
                 phone=phone_num,

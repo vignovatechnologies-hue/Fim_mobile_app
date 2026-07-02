@@ -594,7 +594,7 @@ const s = StyleSheet.create({
 
   // Balance card
   balanceCard: {
-    backgroundColor: C.primary, borderRadius: 28, padding: 24,
+    backgroundColor: C.primary, borderRadius: 24, padding: 18,
     overflow: "hidden", position: "relative",
     ...Platform.select({
       web: { boxShadow: `0px 8px 20px 0px ${C.primary}59` },
@@ -612,12 +612,12 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
   },
   balanceLabel: { fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
-  balanceAmount: { fontSize: 36, fontWeight: "800", color: "#ffffff", marginTop: 4 },
-  balanceRow: { flexDirection: "row", gap: 12, marginTop: 20 },
-  balanceChip: { flex: 1, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, padding: 14 },
+  balanceAmount: { fontSize: 28, fontWeight: "800", color: "#ffffff", marginTop: 3 },
+  balanceRow: { flexDirection: "row", gap: 10, marginTop: 14 },
+  balanceChip: { flex: 1, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 14, padding: 10 },
   balanceChipLabel: { flexDirection: "row", alignItems: "center", gap: 4 },
-  balanceChipLabelTxt: { fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: "700" },
-  balanceChipAmt: { fontSize: 15, fontWeight: "700", color: "#ffffff", marginTop: 6 },
+  balanceChipLabelTxt: { fontSize: 11, color: "rgba(255,255,255,0.8)", fontWeight: "700" },
+  balanceChipAmt: { fontSize: 13, fontWeight: "700", color: "#ffffff", marginTop: 5 },
 
   // Smart Pay
   smartPayBtn: {

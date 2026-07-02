@@ -141,6 +141,7 @@ def serialize_user(user) -> dict:
         initials=initials,
         verified=user.verified,
         premium=user.premium,
+        reminders_enabled=user.reminders_enabled if user.reminders_enabled is not None else True,
         photo_data=user.photo_data
     )
     return r.model_dump()
@@ -168,6 +169,25 @@ def update_photo(
 ):
     photo_data = payload.get("photo_data")
     current_user.photo_data = photo_data
+    db.commit()
+    db.refresh(current_user)
+    return JSONResponse(serialize_user(current_user))
+
+
+# ── REMINDERS toggle ──────────────────────────────────────────────────────────
+@router.get("/api/user/reminders")
+def get_reminder_status(current_user: User = Depends(get_current_user)):
+    enabled = current_user.reminders_enabled if current_user.reminders_enabled is not None else True
+    return JSONResponse({"reminders_enabled": enabled})
+
+
+@router.post("/api/user/reminders")
+def toggle_reminders(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current_value = current_user.reminders_enabled if current_user.reminders_enabled is not None else True
+    current_user.reminders_enabled = not current_value
     db.commit()
     db.refresh(current_user)
     return JSONResponse(serialize_user(current_user))

@@ -17,6 +17,7 @@ class User(Base):
     reset_code = Column(String, nullable=True)
     reset_expires = Column(DateTime, nullable=True)
     premium = Column(Boolean, default=False)
+    reminders_enabled = Column(Boolean, default=True)
     fcm_token = Column(String, nullable=True)
     photo_data = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

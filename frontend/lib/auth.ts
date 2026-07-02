@@ -11,6 +11,7 @@ export type FimUser = {
   verified?: boolean;
   premium?: boolean;
   photo_data?: string;
+  reminders_enabled?: boolean;
 };
 
 export async function getCurrentUser(): Promise<FimUser | null> {

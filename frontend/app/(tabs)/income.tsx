@@ -60,6 +60,7 @@ const iconMap: Record<string, any> = {
 export default function IncomePage() {
   const router = useRouter();
   const [sources, setSources] = useState<Src[]>([]);
+  const [prevMonthTotal, setPrevMonthTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -93,13 +94,21 @@ export default function IncomePage() {
   };
 
   const fetchIncome = async (m: number, y: number) => {
+    // Compute previous month/year
+    const prevM = m === 1 ? 12 : m - 1;
+    const prevY = m === 1 ? y - 1 : y;
     try {
-      const data = await apiFetch<any[]>(`/api/income?month=${m}&year=${y}`);
+      const [data, prevData] = await Promise.all([
+        apiFetch<any[]>(`/api/income?month=${m}&year=${y}`),
+        apiFetch<any[]>(`/api/income?month=${prevM}&year=${prevY}`).catch(() => [] as any[]),
+      ]);
       const mapped = data.map((item) => ({
         ...item,
         icon: iconMap[item.type] || Briefcase,
       }));
       setSources(mapped);
+      const prevTotal = (prevData as any[]).reduce((s: number, x: any) => s + x.amount, 0);
+      setPrevMonthTotal(prevTotal);
     } catch (err: any) {
       Alert.alert("Error", "Failed to load income sources");
     } finally {
@@ -195,6 +204,17 @@ export default function IncomePage() {
 
   const totalIncome = sources.reduce((s, x) => s + x.amount, 0);
 
+  // MoM calculation
+  const momPct: number | null =
+    prevMonthTotal !== null && prevMonthTotal > 0
+      ? Math.round(((totalIncome - prevMonthTotal) / prevMonthTotal) * 100)
+      : null;
+  const momUp = momPct !== null && momPct >= 0;
+  const momLabel =
+    momPct === null
+      ? "– MoM"
+      : `${momUp ? "↑" : "↓"} ${Math.abs(momPct)}% MoM`;
+
   if (loading && sources.length === 0) {
     return (
       <View className="flex-grow justify-center items-center bg-[#f9fafb]">
@@ -256,8 +276,26 @@ export default function IncomePage() {
           <Text className="text-xs uppercase tracking-wider text-emerald-100/75 font-bold">Monthly inflow</Text>
           <Text className="text-3xl font-extrabold text-white mt-1">₹ {totalIncome.toLocaleString("en-IN")}</Text>
           <View className="mt-3 flex-row space-x-2">
-            <View className="bg-white/10 px-3 py-1 rounded-full">
-              <Text className="text-[10px] text-white font-bold">↑ 12% MoM</Text>
+            <View
+              className="px-3 py-1 rounded-full"
+              style={{
+                backgroundColor:
+                  momPct === null ? "rgba(255,255,255,0.1)"
+                  : momUp ? "rgba(52,211,153,0.25)"
+                  : "rgba(248,113,113,0.25)",
+              }}
+            >
+              <Text
+                className="text-[10px] font-bold"
+                style={{
+                  color:
+                    momPct === null ? "#ffffff"
+                    : momUp ? "#6ee7b7"
+                    : "#fca5a5",
+                }}
+              >
+                {momLabel}
+              </Text>
             </View>
             <View className="bg-white/10 px-3 py-1 rounded-full">
               <Text className="text-[10px] text-white font-bold">{sources.length} sources</Text>
