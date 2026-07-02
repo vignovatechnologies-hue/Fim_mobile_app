@@ -49,6 +49,14 @@ def check_and_update_db():
             if not res4.fetchone():
                 conn.execute(text("ALTER TABLE users ADD COLUMN photo_data TEXT NULL"))
                 print("[Migration] Added photo_data column to users table")
+
+            # Check if reminders_enabled exists in users
+            res5 = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='reminders_enabled'"
+            ))
+            if not res5.fetchone():
+                conn.execute(text("ALTER TABLE users ADD COLUMN reminders_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
+                print("[Migration] Added reminders_enabled column to users table")
     except Exception as e:
         print(f"[Migration] Error updating database tables: {e}")
 
