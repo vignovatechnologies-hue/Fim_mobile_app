@@ -4,10 +4,10 @@ import {
   Text as TextComponent,
   ScrollView as ScrollViewComponent,
   TouchableOpacity as TouchableOpacityComponent,
-  SafeAreaView as SafeAreaViewComponent,
   Platform,
   StatusBar
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 // @ts-ignore
 import { useRouter } from "expo-router";
 import { ArrowLeft as ArrowLeftIcon, FileText as FileTextIcon, AlertTriangle as AlertTriangleIcon, Info as InfoIcon, ShieldAlert as ShieldAlertIcon } from "lucide-react-native";
@@ -16,7 +16,6 @@ const View = ViewComponent as any;
 const Text = TextComponent as any;
 const ScrollView = ScrollViewComponent as any;
 const TouchableOpacity = TouchableOpacityComponent as any;
-const SafeAreaView = SafeAreaViewComponent as any;
 
 const ArrowLeft = ArrowLeftIcon as any;
 const FileText = FileTextIcon as any;

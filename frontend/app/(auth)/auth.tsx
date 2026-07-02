@@ -22,6 +22,7 @@ const ShieldCheck = ShieldCheckIcon as any;
 const Sparkles = SparklesIcon as any;
 const Eye = EyeIcon as any;
 const EyeOff = EyeOffIcon as any;
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { signIn, signUp, useAuth } from "../../lib/auth";
 import { useRouter } from "expo-router";
@@ -128,14 +129,15 @@ export default function AuthPage() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-[#f9fafb]"
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
-        className="px-6 py-12"
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
       >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          className="px-6 py-12"
+        >
         <View className="items-center mb-8">
           <View className="w-16 h-16 rounded-[20px] bg-[#0f4a3f] justify-center items-center shadow-lg">
             <Wallet className="w-9 h-9 text-white" />
@@ -315,5 +317,6 @@ export default function AuthPage() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

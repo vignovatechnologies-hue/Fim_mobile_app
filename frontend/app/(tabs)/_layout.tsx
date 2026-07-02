@@ -9,7 +9,14 @@ const Sparkles = SparklesIcon as any;
 const User = UserIcon as any;
 import { View, Platform } from "react-native";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  
+  const paddingBottom = insets.bottom > 0 ? insets.bottom : 8;
+  const height = 54 + paddingBottom;
+
   return (
     <Tabs
       screenOptions={{
@@ -19,9 +26,9 @@ export default function TabsLayout() {
           backgroundColor: "#0d1512",
           borderTopWidth: 1,
           borderTopColor: "#1a2c26",
-          paddingBottom: Platform.OS === "ios" ? 24 : 10,
+          paddingBottom: paddingBottom,
           paddingTop: 8,
-          height: Platform.OS === "ios" ? 88 : 68,
+          height: height,
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -37,6 +44,7 @@ export default function TabsLayout() {
             default: { shadowOpacity: 0 },
           }),
         },
+        headerStatusBarHeight: insets.top,
         headerTitleStyle: {
           color: "#ffffff",
           fontSize: 18,

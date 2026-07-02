@@ -17,6 +17,7 @@ const ArrowLeft = ArrowLeftIcon as any;
 
 import { requestPasswordReset, resetPassword } from "../../lib/auth";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -75,14 +76,15 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-[#f9fafb]"
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
-        className="px-6 py-12"
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
       >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          className="px-6 py-12"
+        >
         <View className="items-center mb-8">
           <View className="w-16 h-16 rounded-[20px] bg-[#0f4a3f] justify-center items-center shadow-lg">
             <KeyRound className="w-8 h-8 text-white" />
@@ -191,5 +193,6 @@ export default function ResetPasswordPage() {
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

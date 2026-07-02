@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.vignove.fim"
+      "package": "com.vignova.fim"
     },
     "web": {
       "favicon": "./assets/favicon.png"

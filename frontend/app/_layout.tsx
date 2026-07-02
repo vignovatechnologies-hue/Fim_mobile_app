@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useAuth } from "../lib/auth";
+import { apiFetch } from "../lib/api";
 import { ActivityIndicator, View, Platform } from "react-native";
 import "../global.css";
 // NOTE: expo-notifications is NOT statically imported here.
@@ -8,7 +9,8 @@ import "../global.css";
 // because SDK 53 removed push notification support from Expo Go.
 import * as Device from "expo-device";
 import Constants, { ExecutionEnvironment } from "expo-constants";
-import { apiFetch } from "../lib/api";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 
 function RootLayoutNav() {
   const { user, ready } = useAuth();
@@ -116,9 +118,18 @@ function RootLayoutNav() {
     );
   }
 
-  return <Slot />;
+  return (
+    <>
+      <StatusBar style="light" />
+      <Slot />
+    </>
+  );
 }
 
 export default function RootLayout() {
-  return <RootLayoutNav />;
+  return (
+    <SafeAreaProvider>
+      <RootLayoutNav />
+    </SafeAreaProvider>
+  );
 }

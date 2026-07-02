@@ -34,8 +34,8 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "export": "expo export --platform web",
     "build": "mkdir -p ./node_modules/.cache/nativewind && npx tailwindcss -i ./global.css -o ./node_modules/.cache/nativewind/global.css && expo export --platform web"

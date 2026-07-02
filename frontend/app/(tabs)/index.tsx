@@ -432,8 +432,8 @@ export default function Dashboard() {
       <View style={{ height: 36 }} />
 
       {/* ════════ FIM Chat Modal ════════ */}
-      <Modal visible={chatOpen} transparent animationType="slide" onRequestClose={() => setChatOpen(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <Modal visible={chatOpen} transparent animationType="slide" onRequestClose={() => setChatOpen(false)} statusBarTranslucent>
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
           <View style={{ flex: 1, justifyContent: "flex-end" }}>
             <TouchableOpacity
               style={StyleSheet.absoluteFillObject}

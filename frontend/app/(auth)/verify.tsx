@@ -17,6 +17,7 @@ const ArrowLeft = ArrowLeftIcon as any;
 
 import { verifyEmail, resendVerification, signOut, useAuth } from "../../lib/auth";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function VerifyPage() {
   const router = useRouter();
@@ -112,14 +113,15 @@ export default function VerifyPage() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-[#f9fafb]"
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
-        className="px-6 py-12"
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
       >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          className="px-6 py-12"
+        >
         <View className="items-center mb-8">
           <View className="w-16 h-16 rounded-[20px] bg-[#0f4a3f] justify-center items-center shadow-lg">
             <MailCheck className="w-9 h-9 text-white" />
@@ -181,5 +183,6 @@ export default function VerifyPage() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
