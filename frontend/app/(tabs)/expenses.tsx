@@ -86,7 +86,12 @@ export default function ExpensesPage() {
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
+  // Pagination
+  const TXN_PAGE_SIZE = 10;
+  const [txnPage, setTxnPage] = useState(1);
+
   const handlePrevMonth = () => {
+    setTxnPage(1);
     if (selectedMonth === 1) {
       setSelectedMonth(12);
       setSelectedYear((y) => y - 1);
@@ -96,6 +101,7 @@ export default function ExpensesPage() {
   };
 
   const handleNextMonth = () => {
+    setTxnPage(1);
     if (selectedMonth === 12) {
       setSelectedMonth(1);
       setSelectedYear((y) => y + 1);
@@ -103,6 +109,10 @@ export default function ExpensesPage() {
       setSelectedMonth((m) => m + 1);
     }
   };
+
+  // Derived paginated slice
+  const txnTotalPages = Math.max(1, Math.ceil(txns.length / TXN_PAGE_SIZE));
+  const paginatedTxns = txns.slice((txnPage - 1) * TXN_PAGE_SIZE, txnPage * TXN_PAGE_SIZE);
 
   const fetchData = async (m: number, y: number) => {
     try {
@@ -361,25 +371,102 @@ export default function ExpensesPage() {
 
       {/* Recent transactions list */}
       <View className="px-5 mt-6 pb-8">
-        <Text className="font-bold text-sm text-[#0f3a31] mb-3">Recent transactions</Text>
-        <View className="bg-white border border-[#e5e7eb] rounded-3xl divide-y divide-[#e5e7eb] shadow-sm">
-          {txns.map((t) => (
-            <View key={t.id} className="flex-row items-center justify-between p-4 border-b border-[#f3f4f6]">
-              <View>
-                <Text className="font-bold text-sm text-[#0f3a31]">{t.name}</Text>
-                <Text className="text-[10px] text-[#7c8a87] mt-0.5 font-medium">
-                  {t.cat} · {t.when} ·{" "}
-                  <Text className={t.payment_status === "credit" ? "text-emerald-500" : "text-[#7c8a87]"}>
-                    {t.payment_status === "credit" ? "Credited" : "Debited"}
+        {/* Header row */}
+        <View className="flex-row items-center justify-between mb-3">
+          <Text className="font-bold text-sm text-[#0f3a31]">Recent transactions</Text>
+          <Text className="text-[10px] text-[#7c8a87] font-medium">
+            {txns.length} total
+          </Text>
+        </View>
+
+        <View className="bg-white border border-[#e5e7eb] rounded-3xl overflow-hidden shadow-sm">
+          {paginatedTxns.length === 0 ? (
+            <View className="p-6 items-center">
+              <Text className="text-xs text-[#7c8a87] font-medium">No transactions this month</Text>
+            </View>
+          ) : (
+            paginatedTxns.map((t) => (
+              <View key={t.id} className="flex-row items-center justify-between px-4 py-3.5 border-b border-[#f3f4f6]">
+                <View className="flex-1 mr-3">
+                  <Text className="font-bold text-sm text-[#0f3a31]">{t.name}</Text>
+                  <Text className="text-[10px] text-[#7c8a87] mt-0.5 font-medium">
+                    {t.cat} · {t.when} ·{" "}
+                    <Text className={t.payment_status === "credit" ? "text-emerald-500" : "text-[#7c8a87]"}>
+                      {t.payment_status === "credit" ? "Credited" : "Debited"}
+                    </Text>
                   </Text>
+                </View>
+                <Text className={`font-bold text-sm ${t.payment_status === "credit" ? "text-emerald-500" : "text-[#0f3a31]"}`}>
+                  {t.payment_status === "credit" ? "+" : "-"}₹{Math.abs(t.amount).toLocaleString("en-IN")}
                 </Text>
               </View>
-              <Text className={`font-bold text-sm ${t.payment_status === "credit" ? "text-emerald-500" : "text-[#0f3a31]"}`}>
-                {t.payment_status === "credit" ? "+" : "-"}₹{Math.abs(t.amount).toLocaleString("en-IN")}
-              </Text>
-            </View>
-          ))}
+            ))
+          )}
         </View>
+
+        {/* Pagination controls */}
+        {txnTotalPages > 1 && (
+          <View className="flex-row items-center justify-between mt-4 px-1">
+            <TouchableOpacity
+              onPress={() => setTxnPage((p) => Math.max(1, p - 1))}
+              disabled={txnPage === 1}
+              className={`flex-row items-center space-x-1 px-4 py-2 rounded-full border ${
+                txnPage === 1
+                  ? "border-[#e5e7eb] bg-[#f9fafb]"
+                  : "border-[#0f4a3f] bg-white"
+              }`}
+            >
+              <ChevronLeft size={14} color={txnPage === 1 ? "#c0c7c4" : "#0f4a3f"} />
+              <Text
+                className={`text-xs font-bold ${
+                  txnPage === 1 ? "text-[#c0c7c4]" : "text-[#0f4a3f]"
+                }`}
+              >
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            {/* Page dots / counter */}
+            <View className="flex-row items-center space-x-1">
+              {Array.from({ length: txnTotalPages }, (_, i) => i + 1).map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  onPress={() => setTxnPage(p)}
+                  className={`w-7 h-7 rounded-full items-center justify-center ${
+                    p === txnPage ? "bg-[#0f4a3f]" : "bg-[#f3f4f6]"
+                  }`}
+                >
+                  <Text
+                    className={`text-[10px] font-bold ${
+                      p === txnPage ? "text-white" : "text-[#7c8a87]"
+                    }`}
+                  >
+                    {p}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setTxnPage((p) => Math.min(txnTotalPages, p + 1))}
+              disabled={txnPage === txnTotalPages}
+              className={`flex-row items-center space-x-1 px-4 py-2 rounded-full border ${
+                txnPage === txnTotalPages
+                  ? "border-[#e5e7eb] bg-[#f9fafb]"
+                  : "border-[#0f4a3f] bg-white"
+              }`}
+            >
+              <Text
+                className={`text-xs font-bold ${
+                  txnPage === txnTotalPages ? "text-[#c0c7c4]" : "text-[#0f4a3f]"
+                }`}
+              >
+                Next
+              </Text>
+              <ChevronRight size={14} color={txnPage === txnTotalPages ? "#c0c7c4" : "#0f4a3f"} />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Log Expense Dialog Modal */}

@@ -1513,39 +1513,6 @@ export default function ProfilePage() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Quick Contact Grid */}
-              <View className="flex-row space-x-2 mt-2">
-                <TouchableOpacity
-                  className="flex-1 bg-emerald-50 border border-emerald-100 rounded-2xl p-3 items-center flex-row justify-center space-x-2"
-                  onPress={() => {
-                    Linking.openURL("https://wa.me/9118003464357?text=Hi%20FIM%20Support%20Team,%20I%20need%20help%20with%20my%20account.");
-                  }}
-                >
-                  <MessageCircle size={16} color="#059669" />
-                  <Text className="text-emerald-700 font-bold text-xs">WhatsApp</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="flex-1 bg-blue-50 border border-blue-100 rounded-2xl p-3 items-center flex-row justify-center space-x-2"
-                  onPress={() => {
-                    Linking.openURL("tel:+9118003464357");
-                  }}
-                >
-                  <Phone size={16} color="#2563eb" />
-                  <Text className="text-blue-700 font-bold text-xs">Call Us</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="flex-1 bg-purple-50 border border-purple-100 rounded-2xl p-3 items-center flex-row justify-center space-x-2"
-                  onPress={() => {
-                    Linking.openURL(`mailto:vignovatechnologies@gmail.com?subject=FIM Support Ticket Request [${supportSubject}]&body=Hi FIM Support Team,\n\nI need assistance with: \n\n[Please describe your issue here]\n\nRegards,\n${user?.name || "User"}`);
-                  }}
-                >
-                  <Mail size={16} color="#7c3aed" />
-                  <Text className="text-purple-700 font-bold text-xs">Email</Text>
-                </TouchableOpacity>
-              </View>
-
               {/* Dynamic Ticket Form */}
               <View className="bg-gray-50 border border-[#e5e7eb] rounded-2xl p-4 mt-4">
                 <Text className="text-xs font-bold text-[#0f3a31] mb-2.5">Send a Message</Text>
