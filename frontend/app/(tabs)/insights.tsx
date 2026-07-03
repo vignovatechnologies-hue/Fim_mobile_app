@@ -128,7 +128,7 @@ export default function InsightsPage() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior="padding"
       keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
       style={{ flex: 1 }}
       className="bg-[#f9fafb]"

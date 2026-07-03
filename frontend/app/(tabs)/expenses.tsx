@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
   Keyboard
 } from "react-native";
 import { useRouter } from "expo-router";
+import KeyboardSafeSheet from "../../components/KeyboardSafeSheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Plus as PlusIcon,
   ArrowDownRight as ArrowDownRightIcon,
@@ -72,15 +74,18 @@ const iconMap: Record<string, any> = {
 
 export default function ExpensesPage() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [txns, setTxns] = useState<Txn[]>([]);
   const [cats, setCats] = useState<BudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const isInitialLoad = useRef(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formAmount, setFormAmount] = useState("");
   const [formCat, setFormCat] = useState("Food");
   const [catDropdownOpen, setCatDropdownOpen] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [budgetDraft, setBudgetDraft] = useState<Record<string, string>>({});
 
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
@@ -115,6 +120,9 @@ export default function ExpensesPage() {
   const paginatedTxns = txns.slice((txnPage - 1) * TXN_PAGE_SIZE, txnPage * TXN_PAGE_SIZE);
 
   const fetchData = async (m: number, y: number) => {
+    if (isInitialLoad.current) {
+      setLoading(true);
+    }
     try {
       const txnsData = await apiFetch<Txn[]>(`/api/transactions?month=${m}&year=${y}`);
       setTxns(txnsData);
@@ -129,6 +137,7 @@ export default function ExpensesPage() {
       Alert.alert("Error", "Failed to load financial records.");
     } finally {
       setLoading(false);
+      isInitialLoad.current = false;
     }
   };
 
@@ -143,8 +152,7 @@ export default function ExpensesPage() {
       return;
     }
 
-    setLoading(true);
-    setModalOpen(false);
+    setIsSaving(true);
     setCatDropdownOpen(false);
     try {
       await apiFetch("/api/transactions", {
@@ -158,10 +166,12 @@ export default function ExpensesPage() {
       Alert.alert("Logged", `Logged ₹${amt} under ${formCat}`);
       setFormName("");
       setFormAmount("");
+      setModalOpen(false);
       fetchData(selectedMonth, selectedYear);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to log expense");
-      setLoading(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -171,20 +181,20 @@ export default function ExpensesPage() {
       payload[c.name] = budgetDraft[c.name] ? Number(budgetDraft[c.name]) : c.budget;
     });
 
-    setLoading(true);
-    setBudgetModalOpen(false);
-    
+    setIsSaving(true);
     try {
       await apiFetch("/api/budgets", {
         method: "POST",
         body: JSON.stringify(payload),
       });
       setBudgetDraft({});
-      Alert.alert("Saved", "Monthly budgets updated successfully!");
+      Alert.alert("Success", "Budgets updated successfully!");
+      setBudgetModalOpen(false);
       fetchData(selectedMonth, selectedYear);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to update budgets");
-      setLoading(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -202,7 +212,7 @@ export default function ExpensesPage() {
   return (
     <ScrollView className="flex-grow bg-[#f9fafb]">
       {/* Page Header */}
-      <View className="px-5 pt-6 pb-3 flex-row items-center justify-between">
+      <View className="px-5 pb-3 flex-row items-center justify-between" style={{ paddingTop: insets.top > 0 ? insets.top + 8 : 16 }}>
         <View>
           <Text className="text-2xl font-extrabold text-[#0f3a31]">Money</Text>
           <View className="flex-row items-center mt-1" style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -410,17 +420,15 @@ export default function ExpensesPage() {
             <TouchableOpacity
               onPress={() => setTxnPage((p) => Math.max(1, p - 1))}
               disabled={txnPage === 1}
-              className={`flex-row items-center space-x-1 px-4 py-2 rounded-full border ${
-                txnPage === 1
-                  ? "border-[#e5e7eb] bg-[#f9fafb]"
-                  : "border-[#0f4a3f] bg-white"
-              }`}
+              className={`flex-row items-center space-x-1 px-4 py-2 rounded-full border ${txnPage === 1
+                ? "border-[#e5e7eb] bg-[#f9fafb]"
+                : "border-[#0f4a3f] bg-white"
+                }`}
             >
               <ChevronLeft size={14} color={txnPage === 1 ? "#c0c7c4" : "#0f4a3f"} />
               <Text
-                className={`text-xs font-bold ${
-                  txnPage === 1 ? "text-[#c0c7c4]" : "text-[#0f4a3f]"
-                }`}
+                className={`text-xs font-bold ${txnPage === 1 ? "text-[#c0c7c4]" : "text-[#0f4a3f]"
+                  }`}
               >
                 Prev
               </Text>
@@ -432,14 +440,12 @@ export default function ExpensesPage() {
                 <TouchableOpacity
                   key={p}
                   onPress={() => setTxnPage(p)}
-                  className={`w-7 h-7 rounded-full items-center justify-center ${
-                    p === txnPage ? "bg-[#0f4a3f]" : "bg-[#f3f4f6]"
-                  }`}
+                  className={`w-7 h-7 rounded-full items-center justify-center ${p === txnPage ? "bg-[#0f4a3f]" : "bg-[#f3f4f6]"
+                    }`}
                 >
                   <Text
-                    className={`text-[10px] font-bold ${
-                      p === txnPage ? "text-white" : "text-[#7c8a87]"
-                    }`}
+                    className={`text-[10px] font-bold ${p === txnPage ? "text-white" : "text-[#7c8a87]"
+                      }`}
                   >
                     {p}
                   </Text>
@@ -450,16 +456,14 @@ export default function ExpensesPage() {
             <TouchableOpacity
               onPress={() => setTxnPage((p) => Math.min(txnTotalPages, p + 1))}
               disabled={txnPage === txnTotalPages}
-              className={`flex-row items-center space-x-1 px-4 py-2 rounded-full border ${
-                txnPage === txnTotalPages
-                  ? "border-[#e5e7eb] bg-[#f9fafb]"
-                  : "border-[#0f4a3f] bg-white"
-              }`}
+              className={`flex-row items-center space-x-1 px-4 py-2 rounded-full border ${txnPage === txnTotalPages
+                ? "border-[#e5e7eb] bg-[#f9fafb]"
+                : "border-[#0f4a3f] bg-white"
+                }`}
             >
               <Text
-                className={`text-xs font-bold ${
-                  txnPage === txnTotalPages ? "text-[#c0c7c4]" : "text-[#0f4a3f]"
-                }`}
+                className={`text-xs font-bold ${txnPage === txnTotalPages ? "text-[#c0c7c4]" : "text-[#0f4a3f]"
+                  }`}
               >
                 Next
               </Text>
@@ -545,15 +549,21 @@ export default function ExpensesPage() {
               <View style={{ flexDirection: "row", gap: 12, borderTopWidth: 1, borderTopColor: "#f3f4f6", paddingTop: 16 }}>
                 <TouchableOpacity
                   onPress={() => { setModalOpen(false); setCatDropdownOpen(false); }}
-                  style={{ flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#f3f4f6", alignItems: "center" }}
+                  disabled={isSaving}
+                  style={{ flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#f3f4f6", alignItems: "center", justifyContent: "center", opacity: isSaving ? 0.5 : 1 }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: "700", color: "#7c8a87" }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleAddExpense}
-                  style={{ flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#0f4a3f", alignItems: "center" }}
+                  disabled={isSaving}
+                  style={{ flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: "#0f4a3f", alignItems: "center", justifyContent: "center", opacity: isSaving ? 0.7 : 1 }}
                 >
-                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#ffffff" }}>Log expense</Text>
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#ffffff" }}>Log expense</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -561,64 +571,68 @@ export default function ExpensesPage() {
         </KeyboardAvoidingView>
       </Modal>
       {/* Set Budgets Modal */}
-      <Modal
+      <KeyboardSafeSheet
         visible={budgetModalOpen}
-        transparent
-        animationType="slide"
         onRequestClose={() => setBudgetModalOpen(false)}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6">
-            <Text className="text-lg font-bold text-[#0f3a31] mb-1">Set monthly budgets</Text>
-            <Text className="text-xs text-[#7c8a87] mb-5">Set spending limits per category.</Text>
+        <ScrollView className="flex-grow-0" style={{ maxHeight: "100%" }} showsVerticalScrollIndicator={false}>
+          <Text className="text-lg font-bold text-[#0f3a31] mb-1">Set monthly budgets</Text>
+          <Text className="text-xs text-[#7c8a87] mb-5">Set spending limits per category.</Text>
 
-            {cats.map((c) => {
-              const Icon = c.icon;
-              let iconBg = "#f3f4f6";
-              let iconColor = "#6b7280";
-              if (c.name === "Food & Dining") { iconBg = "#d1fae5"; iconColor = "#059669"; }
-              else if (c.name === "Shopping") { iconBg = "#fee2e2"; iconColor = "#e11d48"; }
-              else if (c.name === "Transport") { iconBg = "#fef3c7"; iconColor = "#d97706"; }
-              else if (c.name === "Entertainment") { iconBg = "#ede9fe"; iconColor = "#7c3aed"; }
-              else if (c.name === "Home & Bills") { iconBg = "#e0f2fe"; iconColor = "#0284c7"; }
+          {cats.map((c) => {
+            const Icon = c.icon;
+            let iconBg = "#f3f4f6";
+            let iconColor = "#6b7280";
+            if (c.name === "Food & Dining") { iconBg = "#d1fae5"; iconColor = "#059669"; }
+            else if (c.name === "Shopping") { iconBg = "#fee2e2"; iconColor = "#e11d48"; }
+            else if (c.name === "Transport") { iconBg = "#fef3c7"; iconColor = "#d97706"; }
+            else if (c.name === "Entertainment") { iconBg = "#ede9fe"; iconColor = "#7c3aed"; }
+            else if (c.name === "Home & Bills") { iconBg = "#e0f2fe"; iconColor = "#0284c7"; }
 
-              return (
-                <View key={c.name} className="flex-row items-center mb-4">
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: iconBg, justifyContent: "center", alignItems: "center", marginRight: 12 }}>
-                    {Icon && <Icon size={16} color={iconColor} />}
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-xs font-bold text-[#7c8a87] mb-1">{c.name}</Text>
-                    <TextInput
-                      value={budgetDraft[c.name] ?? ""}
-                      onChangeText={(v: string) => setBudgetDraft((d) => ({ ...d, [c.name]: v }))}
-                      keyboardType="numeric"
-                      placeholder={`₹${c.budget.toLocaleString("en-IN")}`}
-                      placeholderTextColor="#9ca3af"
-                      className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm text-[#0f3a31]"
-                    />
-                  </View>
+            return (
+              <View key={c.name} className="flex-row items-center mb-4">
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: iconBg, justifyContent: "center", alignItems: "center", marginRight: 12 }}>
+                  {Icon && <Icon size={16} color={iconColor} />}
                 </View>
-              );
-            })}
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">{c.name}</Text>
+                  <TextInput
+                    value={budgetDraft[c.name] ?? ""}
+                    onChangeText={(v: string) => setBudgetDraft((d) => ({ ...d, [c.name]: v }))}
+                    keyboardType="numeric"
+                    placeholder={`₹${c.budget.toLocaleString("en-IN")}`}
+                    placeholderTextColor="#9ca3af"
+                    className="bg-[#f9fafb] border border-[#e5e7eb] rounded-xl px-3 py-2.5 text-sm text-[#0f3a31]"
+                  />
+                </View>
+              </View>
+            );
+          })}
 
-            <View className="flex-row gap-3 mt-2 pt-4 border-t border-[#e5e7eb]">
-              <TouchableOpacity
-                onPress={() => setBudgetModalOpen(false)}
-                className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center"
-              >
-                <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSaveBudgets}
-                className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center"
-              >
+          <View className="flex-row gap-3 mt-2 pt-4 border-t border-[#e5e7eb]">
+            <TouchableOpacity
+              onPress={() => setBudgetModalOpen(false)}
+              disabled={isSaving}
+              className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center justify-center"
+              style={{ opacity: isSaving ? 0.5 : 1 }}
+            >
+              <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSaveBudgets}
+              disabled={isSaving}
+              className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center justify-center"
+              style={{ opacity: isSaving ? 0.7 : 1 }}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
                 <Text className="text-xs font-bold text-white">Save budgets</Text>
-              </TouchableOpacity>
-            </View>
+              )}
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        </ScrollView>
+      </KeyboardSafeSheet>
     </ScrollView>
   );
-}
+}

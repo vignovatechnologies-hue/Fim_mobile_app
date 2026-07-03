@@ -13,9 +13,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  
-  const paddingBottom = insets.bottom > 0 ? insets.bottom : 8;
-  const height = 54 + paddingBottom;
+
+  const paddingBottom = insets.bottom > 0 ? insets.bottom : (Platform.OS === "android" ? 22 : 12);
+  const height = 62 + paddingBottom;
 
   return (
     <Tabs

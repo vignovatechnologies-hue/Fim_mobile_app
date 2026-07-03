@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   ScrollView,
-  Platform
+  Platform,
+  Keyboard
 } from "react-native";
 import { KeyRound as KeyRoundIcon, Mail as MailIcon, ArrowLeft as ArrowLeftIcon } from "lucide-react-native";
 
@@ -17,16 +18,27 @@ const ArrowLeft = ArrowLeftIcon as any;
 
 import { requestPasswordReset, resetPassword } from "../../lib/auth";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState<"request" | "reset">("request");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () => setKeyboardOpen(true));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardOpen(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleSendInstructions = async () => {
     if (!email) {
@@ -76,123 +88,123 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f9fafb" }} edges={["top", "bottom"]}>
+    <View style={{ flex: 1, backgroundColor: "#f9fafb", paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
         className="flex-1"
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: keyboardOpen ? "flex-start" : "center" }}
           className="px-6 py-12"
         >
-        <View className="items-center mb-8">
-          <View className="w-16 h-16 rounded-[20px] bg-[#0f4a3f] justify-center items-center shadow-lg">
-            <KeyRound className="w-8 h-8 text-white" />
+          <View className="items-center mb-8">
+            <View className="w-16 h-16 rounded-[20px] bg-[#0f4a3f] justify-center items-center shadow-lg">
+              <KeyRound className="w-8 h-8 text-white" />
+            </View>
+            <Text className="text-2xl font-extrabold text-[#0f3a31] mt-4 tracking-tight">
+              {step === "request" ? "Forgot password?" : "Set new password"}
+            </Text>
+            <Text className="text-xs text-[#7c8a87] mt-1 text-center font-medium px-4">
+              {step === "request"
+                ? "Enter your email and we'll send reset instructions."
+                : `Enter the 6-digit code sent to ${email}`}
+            </Text>
           </View>
-          <Text className="text-2xl font-extrabold text-[#0f3a31] mt-4 tracking-tight">
-            {step === "request" ? "Forgot password?" : "Set new password"}
-          </Text>
-          <Text className="text-xs text-[#7c8a87] mt-1 text-center font-medium px-4">
-            {step === "request"
-              ? "Enter your email and we'll send reset instructions."
-              : `Enter the 6-digit code sent to ${email}`}
-          </Text>
-        </View>
 
-        <View className="bg-white border border-[#e5e7eb] rounded-3xl p-6 shadow-sm">
-          {step === "request" ? (
-            <View className="space-y-4">
-              <View>
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Email</Text>
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  placeholder="you@email.com"
-                  placeholderTextColor="#9ca3af"
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
-              </View>
-              <TouchableOpacity
-                onPress={handleSendInstructions}
-                disabled={busy || !email}
-                className="w-full bg-[#0f4a3f] rounded-2xl py-3.5 flex-row justify-center items-center mt-4 shadow-glow"
-              >
-                <Mail className="w-4 h-4 text-white mr-2" />
-                <Text className="text-white text-sm font-bold">
-                  {busy ? "Sending…" : "Send reset instructions"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View className="space-y-4">
-              <View>
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">6-digit code</Text>
-                <TextInput
-                  value={code}
-                  onChangeText={(val: string) => setCode(val.replace(/\D/g, ""))}
-                  keyboardType="numeric"
-                  maxLength={6}
-                  placeholder="••••••"
-                  placeholderTextColor="#9ca3af"
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-center text-sm font-bold tracking-[0.5em] text-[#0f3a31]"
-                />
-              </View>
-              <View className="mt-3">
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">New password</Text>
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  placeholder="••••••••"
-                  placeholderTextColor="#9ca3af"
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
-              </View>
-              <View className="mt-3">
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Confirm password</Text>
-                <TextInput
-                  value={confirm}
-                  onChangeText={setConfirm}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  placeholder="••••••••"
-                  placeholderTextColor="#9ca3af"
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
-              </View>
-              <TouchableOpacity
-                onPress={handleSubmitReset}
-                disabled={busy}
-                className="w-full bg-[#0f4a3f] rounded-2xl py-3.5 items-center mt-4 shadow-glow"
-              >
-                <Text className="text-white text-sm font-bold">
-                  {busy ? "Updating…" : "Update password"}
-                </Text>
-              </TouchableOpacity>
-              <View className="flex-row justify-between items-center mt-4 px-1">
-                <TouchableOpacity onPress={handleResend}>
-                  <Text className="text-xs font-bold text-[#10b981]">Resend code</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setStep("request")}>
-                  <Text className="text-xs font-bold text-[#7c8a87]">Use different email</Text>
+          <View className="bg-white border border-[#e5e7eb] rounded-3xl p-6 shadow-sm">
+            {step === "request" ? (
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Email</Text>
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholder="you@email.com"
+                    placeholderTextColor="#9ca3af"
+                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                  />
+                </View>
+                <TouchableOpacity
+                  onPress={handleSendInstructions}
+                  disabled={busy || !email}
+                  className="w-full bg-[#0f4a3f] rounded-2xl py-3.5 flex-row justify-center items-center mt-4 shadow-glow"
+                >
+                  <Mail className="w-4 h-4 text-white mr-2" />
+                  <Text className="text-white text-sm font-bold">
+                    {busy ? "Sending…" : "Send reset instructions"}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          )}
-        </View>
+            ) : (
+              <View className="space-y-4">
+                <View>
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">6-digit code</Text>
+                  <TextInput
+                    value={code}
+                    onChangeText={(val: string) => setCode(val.replace(/\D/g, ""))}
+                    keyboardType="numeric"
+                    maxLength={6}
+                    placeholder="••••••"
+                    placeholderTextColor="#9ca3af"
+                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-center text-sm font-bold tracking-[0.5em] text-[#0f3a31]"
+                  />
+                </View>
+                <View className="mt-3">
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">New password</Text>
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    placeholder="••••••••"
+                    placeholderTextColor="#9ca3af"
+                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                  />
+                </View>
+                <View className="mt-3">
+                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Confirm password</Text>
+                  <TextInput
+                    value={confirm}
+                    onChangeText={setConfirm}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    placeholder="••••••••"
+                    placeholderTextColor="#9ca3af"
+                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                  />
+                </View>
+                <TouchableOpacity
+                  onPress={handleSubmitReset}
+                  disabled={busy}
+                  className="w-full bg-[#0f4a3f] rounded-2xl py-3.5 items-center mt-4 shadow-glow"
+                >
+                  <Text className="text-white text-sm font-bold">
+                    {busy ? "Updating…" : "Update password"}
+                  </Text>
+                </TouchableOpacity>
+                <View className="flex-row justify-between items-center mt-4 px-1">
+                  <TouchableOpacity onPress={handleResend}>
+                    <Text className="text-xs font-bold text-[#10b981]">Resend code</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setStep("request")}>
+                    <Text className="text-xs font-bold text-[#7c8a87]">Use different email</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
 
-        <TouchableOpacity
-          onPress={() => router.replace("/(auth)/auth")}
-          className="flex-row justify-center items-center mt-8 p-2"
-        >
-          <ArrowLeft className="w-4 h-4 text-[#7c8a87] mr-1.5" />
-          <Text className="text-xs font-bold text-[#7c8a87]">Back to sign in</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
-    </SafeAreaView>
+          <TouchableOpacity
+            onPress={() => router.replace("/(auth)/auth")}
+            className="flex-row justify-center items-center mt-8 p-2"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#7c8a87] mr-1.5" />
+            <Text className="text-xs font-bold text-[#7c8a87]">Back to sign in</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }

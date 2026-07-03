@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Platform
+  Platform,
+  KeyboardAvoidingView
 } from "react-native";
 import {
   Plus as PlusIcon,
@@ -35,6 +36,8 @@ const ChevronDown = ChevronDownIcon as any;
 import { apiFetch } from "../../lib/api";
 import { useFocusEffect } from "expo-router";
 import SmartCalendarModal from "../../components/SmartCalendarModal";
+import KeyboardSafeSheet from "../../components/KeyboardSafeSheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Loan = {
   id: number;
@@ -55,6 +58,7 @@ type Loan = {
 const FILTERS = ["All", "Home", "Personal", "Auto", "Education", "Consumer"] as const;
 
 export default function EmisPage() {
+  const insets = useSafeAreaInsets();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [loading, setLoading] = useState(true);
@@ -74,6 +78,7 @@ export default function EmisPage() {
   const [formType, setFormType] = useState("Personal");
   const [formDueDay, setFormDueDay] = useState("5");
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
@@ -82,7 +87,7 @@ export default function EmisPage() {
     const principal = Number(formAmount);
     const rate = Number(formRate);
     const tenure = Number(formTenure);
-    
+
     if (principal > 0 && rate > 0 && tenure > 0) {
       const monthlyRate = rate / (12 * 100);
       const calculated = (principal * monthlyRate * Math.pow(1 + monthlyRate, tenure)) / (Math.pow(1 + monthlyRate, tenure) - 1);
@@ -145,7 +150,6 @@ export default function EmisPage() {
   };
 
   const handlePayOne = async (id: number, emiAmount: number) => {
-    setLoading(true);
     try {
       await apiFetch("/api/payments/verify-signature", {
         method: "POST",
@@ -162,17 +166,15 @@ export default function EmisPage() {
       fetchLoans();
     } catch (err: any) {
       Alert.alert("Operation Failed", err.message || "Failed to record payment");
-      setLoading(false);
     }
   };
 
   const handlePayAll = async () => {
-    setConfirmAllModal(false);
     const unpaidLoans = loans.filter((l) => !l.paid);
     const totalAmount = unpaidLoans.reduce((s, l) => s + l.emi, 0);
     const unpaidLoanIds = unpaidLoans.map((l) => l.id);
 
-    setLoading(true);
+    setIsSaving(true);
     try {
       await apiFetch("/api/payments/verify-signature", {
         method: "POST",
@@ -186,10 +188,12 @@ export default function EmisPage() {
         }),
       });
       Alert.alert("Success", "All EMIs marked paid!");
+      setConfirmAllModal(false);
       fetchLoans();
     } catch (err: any) {
       Alert.alert("Operation Failed", err.message || "Failed to mark EMIs as paid");
-      setLoading(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -220,7 +224,7 @@ export default function EmisPage() {
 
   const handleOpenEdit = (l: Loan) => {
     setEditingLoan(l);
-    
+
     let loanName = l.name;
     let lenderName = "";
     const match = l.name.match(/^(.*?)\s*\((.*?)\)$/);
@@ -235,13 +239,13 @@ export default function EmisPage() {
     setFormRate(String(l.rate));
     setFormType(l.type);
     setFormDueDay(String(l.due));
-    
+
     let totalTenure = 60;
     if (l.tenure && l.tenure.includes("/")) {
       totalTenure = Number(l.tenure.split("/")[1]) || 60;
     }
     setFormTenure(String(totalTenure));
-    
+
     const principalVal = l.original_amount ? l.original_amount : calculatePrincipal(l.emi, l.rate, totalTenure);
     setFormAmount(String(Math.round(principalVal)));
     setFormLeftAmount(String(Math.round(l.left)));
@@ -284,7 +288,7 @@ export default function EmisPage() {
     const parsedRate = Number(formRate) || 12;
     const parsedDue = Number(formDueDay) || 5;
     const tenureVal = Number(formTenure) || 60;
-    
+
     // Calculate end date from start date + tenure
     const calculatedEndDate = new Date(startDate);
     calculatedEndDate.setMonth(calculatedEndDate.getMonth() + tenureVal);
@@ -296,8 +300,7 @@ export default function EmisPage() {
 
     const combinedName = `${formLoanName.trim()} (${formLenderName.trim()})`;
 
-    setLoading(true);
-    setFormOpen(false);
+    setIsSaving(true);
     setTypeDropdownOpen(false);
     try {
       if (editingLoan) {
@@ -339,10 +342,12 @@ export default function EmisPage() {
         });
         showAlert("Success", "New loan added successfully");
       }
+      setFormOpen(false);
       fetchLoans();
     } catch (err: any) {
       showAlert("Error", err.message || "Failed to save loan details");
-      setLoading(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -352,16 +357,17 @@ export default function EmisPage() {
 
   const performDeleteLoan = async () => {
     if (!deleteConfirmLoan) return;
-    setLoading(true);
+    setIsSaving(true);
     const loanToDelete = deleteConfirmLoan;
-    setDeleteConfirmLoan(null);
     try {
       await apiFetch(`/api/loans/${loanToDelete.id}`, { method: "DELETE" });
       Alert.alert("Deleted", "Loan removed successfully");
+      setDeleteConfirmLoan(null);
       fetchLoans();
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to delete loan");
-      setLoading(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -393,7 +399,7 @@ export default function EmisPage() {
   return (
     <ScrollView className="flex-grow bg-[#f9fafb]">
       {/* Page Title Header */}
-      <View className="px-5 pt-6 pb-3 flex-row items-center justify-between">
+      <View className="px-5 pb-3 flex-row items-center justify-between" style={{ paddingTop: insets.top > 0 ? insets.top + 8 : 16 }}>
         <View>
           <Text className="text-2xl font-extrabold text-[#0f3a31]">Your EMIs</Text>
           <Text className="text-xs text-[#7c8a87] font-semibold">{loans.length} active loans</Text>
@@ -442,9 +448,8 @@ export default function EmisPage() {
               <TouchableOpacity
                 key={t}
                 onPress={() => setFilter(t)}
-                className={`px-4 py-1.5 rounded-full border mr-2 ${
-                  isActive ? "bg-[#0d1512] border-[#0d1512]" : "bg-white border-[#e5e7eb]"
-                }`}
+                className={`px-4 py-1.5 rounded-full border mr-2 ${isActive ? "bg-[#0d1512] border-[#0d1512]" : "bg-white border-[#e5e7eb]"
+                  }`}
               >
                 <Text className={`text-xs font-bold ${isActive ? "text-white" : "text-[#7c8a87]"}`}>{t}</Text>
               </TouchableOpacity>
@@ -466,9 +471,8 @@ export default function EmisPage() {
           return (
             <View
               key={l.id}
-              className={`bg-white border border-[#e5e7eb] rounded-3xl p-4 mb-3 shadow-sm ${
-                l.paid ? "opacity-60" : ""
-              }`}
+              className={`bg-white border border-[#e5e7eb] rounded-3xl p-4 mb-3 shadow-sm ${l.paid ? "opacity-60" : ""
+                }`}
             >
               <View className="flex-row items-start">
                 <View className="w-12 h-12 rounded-2xl bg-gray-100 justify-center items-center text-xl">
@@ -516,9 +520,8 @@ export default function EmisPage() {
                 <TouchableOpacity
                   disabled={l.paid}
                   onPress={() => handlePayOne(l.id, l.emi)}
-                  className={`flex-1 py-2.5 rounded-xl justify-center items-center ${
-                    l.paid ? "bg-emerald-50" : "bg-[#0f4a3f]"
-                  }`}
+                  className={`flex-1 py-2.5 rounded-xl justify-center items-center ${l.paid ? "bg-emerald-50" : "bg-[#0f4a3f]"
+                    }`}
                 >
                   <Text className={`text-xs font-bold ${l.paid ? "text-emerald-600" : "text-white"}`}>
                     {l.paid ? "Paid ✓" : "Mark paid"}
@@ -558,15 +561,23 @@ export default function EmisPage() {
             <View className="flex-row justify-end space-x-3">
               <TouchableOpacity
                 onPress={() => setConfirmAllModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-gray-100"
+                disabled={isSaving}
+                className="px-4 py-2.5 rounded-xl bg-gray-100 justify-center items-center"
+                style={{ opacity: isSaving ? 0.5 : 1 }}
               >
                 <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handlePayAll}
-                className="px-4 py-2.5 rounded-xl bg-[#0f4a3f]"
+                disabled={isSaving}
+                className="px-4 py-2.5 rounded-xl bg-[#0f4a3f] justify-center items-center min-w-[70px]"
+                style={{ opacity: isSaving ? 0.7 : 1 }}
               >
-                <Text className="text-xs font-bold text-white">Confirm</Text>
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text className="text-xs font-bold text-white">Confirm</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -574,185 +585,196 @@ export default function EmisPage() {
       </Modal>
 
       {/* Add / Edit Loan Dialog Modal */}
-      <Modal
+      <KeyboardSafeSheet
         visible={formOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setFormOpen(false)}
+        onRequestClose={() => {
+          setFormOpen(false);
+          setTypeDropdownOpen(false);
+        }}
       >
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[90%]">
-            <Text className="text-lg font-bold text-[#0f3a31] mb-1">
-              {editingLoan ? "Edit Loan Tracker" : "Add a loan"}
-            </Text>
-            <Text className="text-xs text-[#7c8a87] mb-5">
-              {editingLoan ? `Modify details for ${editingLoan.name}` : "Track a new EMI in FIM."}
-            </Text>
-            <ScrollView className="space-y-4">
-              <View>
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Name *</Text>
+
+        <Text className="text-lg font-bold text-[#0f3a31] mb-1">
+          {editingLoan ? "Edit Loan Tracker" : "Add a loan"}
+        </Text>
+        <Text className="text-xs text-[#7c8a87] mb-5">
+          {editingLoan ? `Modify details for ${editingLoan.name}` : "Track a new EMI in FIM."}
+        </Text>
+
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="space-y-4">
+            <View>
+              <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Name *</Text>
+              <TextInput
+                value={formLoanName}
+                onChangeText={setFormLoanName}
+                placeholder=""
+                placeholderTextColor="#9ca3af"
+                className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+              />
+            </View>
+
+            <View className="mt-3">
+              <Text className="text-xs font-bold text-[#7c8a87] mb-1">Lender / Bank Name *</Text>
+              <TextInput
+                value={formLenderName}
+                onChangeText={setFormLenderName}
+                placeholder=""
+                placeholderTextColor="#9ca3af"
+                className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+              />
+            </View>
+
+            <View className="flex-row space-x-3 mt-3">
+              <View className="flex-1">
+                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Amount *</Text>
                 <TextInput
-                  value={formLoanName}
-                  onChangeText={setFormLoanName}
-                  placeholder=""
-                  placeholderTextColor="#9ca3af"
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
-              </View>
-
-              <View className="mt-3">
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Lender / Bank Name *</Text>
-                <TextInput
-                  value={formLenderName}
-                  onChangeText={setFormLenderName}
-                  placeholder=""
-                  placeholderTextColor="#9ca3af"
-                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                />
-              </View>
-
-              <View className="flex-row space-x-3 mt-3">
-                <View className="flex-1">
-                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Amount *</Text>
-                  <TextInput
-                    value={formAmount}
-                    onChangeText={setFormAmount}
-                    keyboardType="numeric"
-                    placeholder=""
-                    placeholderTextColor="#9ca3af"
-                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                  />
-                </View>
-                <View className="flex-grow flex-1">
-                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Interest Rate (ROI) *</Text>
-                  <TextInput
-                    value={formRate}
-                    onChangeText={setFormRate}
-                    keyboardType="numeric"
-                    placeholder=""
-                    placeholderTextColor="#9ca3af"
-                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                  />
-                </View>
-              </View>
-
-              <View className="flex-row space-x-3 mt-3">
-                <View className="flex-grow flex-1">
-                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Tenure (Months) *</Text>
-                  <TextInput
-                    value={formTenure}
-                    onChangeText={setFormTenure}
-                    keyboardType="numeric"
-                    placeholder=""
-                    placeholderTextColor="#9ca3af"
-                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                  />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Start Date *</Text>
-                  <TouchableOpacity
-                    onPress={() => openCalendar("start")}
-                    className="w-full bg-white border border-[#e5e7eb] rounded-2xl px-4 py-3 flex-row items-center justify-between"
-                  >
-                    <Text className="text-sm text-[#0f3a31] font-semibold">
-                      {formatDateForDisplay(startDate)}
-                    </Text>
-                    <CalendarIcon size={14} color="#7c8a87" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View className="flex-row space-x-3 mt-3">
-                <View className="flex-1">
-                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">EMI Amount (Auto Calculated)</Text>
-                  <TextInput
-                    value={formEmi ? `₹${Number(formEmi).toLocaleString("en-IN")}` : "Calculated automatically"}
-                    editable={false}
-                    className="w-full bg-gray-100 border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-gray-500 font-bold"
-                  />
-                </View>
-                <View className="flex-grow flex-1">
-                  <Text className="text-xs font-bold text-[#7c8a87] mb-1">EMI Due Day *</Text>
-                  <TextInput
-                    value={formDueDay}
-                    onChangeText={setFormDueDay}
-                    keyboardType="numeric"
-                    placeholder=""
-                    placeholderTextColor="#9ca3af"
-                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
-                  />
-                </View>
-              </View>
-
-              <View className="mt-3">
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Outstanding Balance</Text>
-                <TextInput
-                  value={formLeftAmount}
-                  onChangeText={setFormLeftAmount}
+                  value={formAmount}
+                  onChangeText={setFormAmount}
                   keyboardType="numeric"
                   placeholder=""
                   placeholderTextColor="#9ca3af"
                   className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
                 />
               </View>
-
-              <View className="mt-3">
-                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Category / Type</Text>
-                <View className="relative">
-                  <TouchableOpacity
-                    onPress={() => setTypeDropdownOpen(!typeDropdownOpen)}
-                    className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3.5 flex-row justify-between items-center"
-                  >
-                    <Text className="text-sm text-[#0f3a31] font-semibold">{formType}</Text>
-                    <Text className="text-xs text-[#7c8a87] font-bold">{typeDropdownOpen ? "▲" : "▼"}</Text>
-                  </TouchableOpacity>
-
-                  {typeDropdownOpen && (
-                    <View className="mt-1 bg-white border border-[#e5e7eb] rounded-2xl overflow-hidden shadow-md">
-                      {["Home", "Personal", "Auto", "Education", "Consumer"].map((t) => (
-                        <TouchableOpacity
-                          key={t}
-                          onPress={() => {
-                            setFormType(t);
-                            setTypeDropdownOpen(false);
-                          }}
-                          className={`px-4 py-3 border-b border-[#f3f4f6] ${
-                            formType === t ? "bg-emerald-50/50" : ""
-                          }`}
-                        >
-                          <Text className={`text-xs ${formType === t ? "font-bold text-[#0f4a3f]" : "text-[#0f3a31] font-semibold"}`}>
-                            {t}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
+              <View className="flex-grow flex-1">
+                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Interest Rate (ROI) *</Text>
+                <TextInput
+                  value={formRate}
+                  onChangeText={setFormRate}
+                  keyboardType="numeric"
+                  placeholder=""
+                  placeholderTextColor="#9ca3af"
+                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                />
               </View>
+            </View>
 
-              <View className="flex-row space-x-3 mt-6 pt-4 border-t border-[#e5e7eb]">
+            <View className="flex-row space-x-3 mt-3">
+              <View className="flex-grow flex-1">
+                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Tenure (Months) *</Text>
+                <TextInput
+                  value={formTenure}
+                  onChangeText={setFormTenure}
+                  keyboardType="numeric"
+                  placeholder=""
+                  placeholderTextColor="#9ca3af"
+                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Start Date *</Text>
                 <TouchableOpacity
-                  onPress={() => {
-                    setFormOpen(false);
-                    setTypeDropdownOpen(false);
-                  }}
-                  className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center"
+                  onPress={() => openCalendar("start")}
+                  className="w-full bg-white border border-[#e5e7eb] rounded-2xl px-4 py-3 flex-row items-center justify-between"
                 >
-                  <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+                  <Text className="text-sm text-[#0f3a31] font-semibold">
+                    {formatDateForDisplay(startDate)}
+                  </Text>
+                  <CalendarIcon size={14} color="#7c8a87" />
                 </TouchableOpacity>
+              </View>
+            </View>
+
+            <View className="flex-row space-x-3 mt-3">
+              <View className="flex-1">
+                <Text className="text-xs font-bold text-[#7c8a87] mb-1">EMI Amount (Auto Calculated)</Text>
+                <TextInput
+                  value={formEmi ? `₹${Number(formEmi).toLocaleString("en-IN")}` : "Calculated automatically"}
+                  editable={false}
+                  className="w-full bg-gray-100 border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-gray-500 font-bold"
+                />
+              </View>
+              <View className="flex-grow flex-1">
+                <Text className="text-xs font-bold text-[#7c8a87] mb-1">EMI Due Day *</Text>
+                <TextInput
+                  value={formDueDay}
+                  onChangeText={setFormDueDay}
+                  keyboardType="numeric"
+                  placeholder=""
+                  placeholderTextColor="#9ca3af"
+                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+                />
+              </View>
+            </View>
+
+            <View className="mt-3">
+              <Text className="text-xs font-bold text-[#7c8a87] mb-1">Outstanding Balance</Text>
+              <TextInput
+                value={formLeftAmount}
+                onChangeText={setFormLeftAmount}
+                keyboardType="numeric"
+                placeholder=""
+                placeholderTextColor="#9ca3af"
+                className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3 text-sm text-[#0f3a31]"
+              />
+            </View>
+
+            <View className="mt-3">
+              <Text className="text-xs font-bold text-[#7c8a87] mb-1">Loan Category / Type</Text>
+              <View className="relative">
                 <TouchableOpacity
-                  onPress={handleSaveLoan}
-                  className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center"
+                  onPress={() => setTypeDropdownOpen(!typeDropdownOpen)}
+                  className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl px-4 py-3.5 flex-row justify-between items-center"
                 >
+                  <Text className="text-sm text-[#0f3a31] font-semibold">{formType}</Text>
+                  <Text className="text-xs text-[#7c8a87] font-bold">{typeDropdownOpen ? "▲" : "▼"}</Text>
+                </TouchableOpacity>
+
+                {typeDropdownOpen && (
+                  <View className="mt-1 bg-white border border-[#e5e7eb] rounded-2xl overflow-hidden shadow-md">
+                    {["Home", "Personal", "Auto", "Education", "Consumer"].map((t) => (
+                      <TouchableOpacity
+                        key={t}
+                        onPress={() => {
+                          setFormType(t);
+                          setTypeDropdownOpen(false);
+                        }}
+                        className={`px-4 py-3 border-b border-[#f3f4f6] ${formType === t ? "bg-emerald-50/50" : ""
+                          }`}
+                      >
+                        <Text className={`text-xs ${formType === t ? "font-bold text-[#0f4a3f]" : "text-[#0f3a31] font-semibold"}`}>
+                          {t}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View className="flex-row space-x-3 mt-6 pt-4 border-t border-[#e5e7eb]">
+              <TouchableOpacity
+                onPress={() => {
+                  setFormOpen(false);
+                  setTypeDropdownOpen(false);
+                }}
+                disabled={isSaving}
+                className="flex-1 py-3.5 rounded-2xl bg-gray-100 items-center justify-center"
+                style={{ opacity: isSaving ? 0.5 : 1 }}
+              >
+                <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveLoan}
+                disabled={isSaving}
+                className="flex-1 py-3.5 rounded-2xl bg-[#0f4a3f] items-center justify-center"
+                style={{ opacity: isSaving ? 0.7 : 1 }}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
                   <Text className="text-xs font-bold text-white">
                     {editingLoan ? "Save Changes" : "Add loan"}
                   </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </ScrollView>
+      </KeyboardSafeSheet>
 
       {/* Smart Calendar Modal */}
       <SmartCalendarModal
@@ -780,15 +802,23 @@ export default function EmisPage() {
             <View className="flex-row space-x-3 justify-end">
               <TouchableOpacity
                 onPress={() => setDeleteConfirmLoan(null)}
-                className="px-4 py-2.5 rounded-xl bg-gray-100"
+                disabled={isSaving}
+                className="px-4 py-2.5 rounded-xl bg-gray-100 justify-center items-center"
+                style={{ opacity: isSaving ? 0.5 : 1 }}
               >
                 <Text className="text-xs font-bold text-[#7c8a87]">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={performDeleteLoan}
-                className="px-4 py-2.5 rounded-xl bg-red-600"
+                disabled={isSaving}
+                className="px-4 py-2.5 rounded-xl bg-red-600 justify-center items-center min-w-[80px]"
+                style={{ opacity: isSaving ? 0.7 : 1 }}
               >
-                <Text className="text-xs font-bold text-white">Delete</Text>
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text className="text-xs font-bold text-white">Delete</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

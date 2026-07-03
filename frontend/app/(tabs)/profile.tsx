@@ -20,6 +20,7 @@ import { EncodingType } from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { useRouter } from "expo-router";
+import KeyboardSafeSheet from "../../components/KeyboardSafeSheet";
 import {
   Shield as ShieldIcon,
   Bell as BellIcon,
@@ -400,14 +401,12 @@ const CustomDropdown = ({
                     onSelect(opt);
                     onToggle();
                   }}
-                  className={`px-5 py-3 flex-row justify-between items-center ${
-                    value === opt ? "bg-emerald-50" : ""
-                  }`}
+                  className={`px-5 py-3 flex-row justify-between items-center ${value === opt ? "bg-emerald-50" : ""
+                    }`}
                 >
                   <Text
-                    className={`text-sm ${
-                      value === opt ? "font-bold text-[#0f4a3f]" : "text-[#7c8a87]"
-                    }`}
+                    className={`text-sm ${value === opt ? "font-bold text-[#0f4a3f]" : "text-[#7c8a87]"
+                      }`}
                     style={{ paddingRight: 6 }}
                   >
                     {opt}{" "}
@@ -595,7 +594,7 @@ export default function ProfilePage() {
       }
 
       const asset = result.assets[0];
-      
+
       // Validation size limit of 2MB
       const maxSize = 2 * 1024 * 1024; // 2MB
       if (asset.size && asset.size > maxSize) {
@@ -650,7 +649,7 @@ export default function ProfilePage() {
       const AsyncStorage = require("@react-native-async-storage/async-storage").default;
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
       notifyAuthChange();
-      
+
       if (Platform.OS === "web") {
         window.alert("Profile photo uploaded successfully!");
       } else {
@@ -1252,7 +1251,7 @@ export default function ProfilePage() {
               ))}
             </View>
 
-             {range !== "custom" && (
+            {range !== "custom" && (
               <View className="space-y-4" style={{ zIndex: openDropdown ? 50 : 1 }}>
                 {range === "day" && (
                   <View className="space-y-3" style={{ zIndex: openDropdown ? 50 : 1 }}>
@@ -1490,123 +1489,117 @@ export default function ProfilePage() {
       </Modal>
 
       {/* Help & Support Modal */}
-      <Modal
+      <KeyboardSafeSheet
         visible={supportOpen}
-        transparent
-        animationType="slide"
         onRequestClose={() => setSupportOpen(false)}
       >
-        <View className="flex-1 justify-end bg-black/60">
-          <View className="bg-white rounded-t-3xl p-6 max-h-[85%]">
-            {/* Header */}
-            <View className="flex-row justify-between items-center mb-4">
-              <View>
-                <Text className="text-xl font-extrabold text-[#0f3a31]">Help & Support</Text>
-                <Text className="text-xs text-[#7c8a87] mt-0.5">We're here to help you 24/7</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setSupportOpen(false)}
-                className="bg-gray-100 px-3 py-1.5 rounded-full"
-              >
-                <Text className="text-[#7c8a87] text-xs font-bold">Close</Text>
-              </TouchableOpacity>
-            </View>
+        {/* Header */}
+        <View className="flex-row justify-between items-center mb-4">
+          <View>
+            <Text className="text-xl font-extrabold text-[#0f3a31]">Help & Support</Text>
+            <Text className="text-xs text-[#7c8a87] mt-0.5">We're here to help you 24/7</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setSupportOpen(false)}
+            className="bg-gray-100 px-3 py-1.5 rounded-full"
+          >
+            <Text className="text-[#7c8a87] text-xs font-bold">Close</Text>
+          </TouchableOpacity>
+        </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Dynamic Ticket Form */}
-              <View className="bg-gray-50 border border-[#e5e7eb] rounded-2xl p-4 mt-4">
-                <Text className="text-xs font-bold text-[#0f3a31] mb-2.5">Send a Message</Text>
+        <ScrollView className="flex-grow-0" style={{ maxHeight: "100%" }} showsVerticalScrollIndicator={false}>
+          {/* Dynamic Ticket Form */}
+          <View className="bg-gray-50 border border-[#e5e7eb] rounded-2xl p-4 mt-4">
+            <Text className="text-xs font-bold text-[#0f3a31] mb-2.5">Send a Message</Text>
 
-                {/* Subject Selector */}
-                <View className="flex-row space-x-1.5 mb-3">
-                  {["General", "Transactions", "Premium", "Refinance"].map((sub) => (
-                    <TouchableOpacity
-                      key={sub}
-                      onPress={() => setSupportSubject(sub)}
-                      className={`px-3 py-1.5 rounded-xl border ${supportSubject === sub
-                          ? "bg-[#0f4a3f] border-[#0f4a3f]"
-                          : "bg-white border-[#e5e7eb]"
-                        }`}
-                    >
-                      <Text className={`text-[10px] font-extrabold ${supportSubject === sub ? "text-white" : "text-[#7c8a87]"
-                        }`}>
-                        {sub}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Message Input */}
-                <View className="bg-white border border-[#e5e7eb] rounded-xl p-3 min-h-[90px] justify-between">
-                  <TextInput
-                    placeholder="Type your issue or query here..."
-                    placeholderTextColor="#9ca3af"
-                    multiline
-                    value={supportMessage}
-                    onChangeText={setSupportMessage}
-                    className="text-xs text-[#0f3a31] flex-1"
-                    style={{ textAlignVertical: "top" }}
-                  />
-                </View>
-
-                {/* Submit Button */}
+            {/* Subject Selector */}
+            <View className="flex-row space-x-1.5 mb-3">
+              {["General", "Transactions", "Premium", "Refinance"].map((sub) => (
                 <TouchableOpacity
-                  onPress={handleSendSupport}
-                  disabled={supportSending || supportSuccess}
-                  className={`mt-3 py-3 rounded-xl flex-row justify-center items-center space-x-2 ${supportSuccess
-                      ? "bg-emerald-500"
-                      : "bg-[#0f4a3f]"
+                  key={sub}
+                  onPress={() => setSupportSubject(sub)}
+                  className={`px-3 py-1.5 rounded-xl border ${supportSubject === sub
+                    ? "bg-[#0f4a3f] border-[#0f4a3f]"
+                    : "bg-white border-[#e5e7eb]"
                     }`}
                 >
-                  {supportSending ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : supportSuccess ? (
-                    <>
-                      <CheckCircle size={14} color="#ffffff" />
-                      <Text className="text-white font-bold text-xs">Message Sent!</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={12} color="#ffffff" />
-                      <Text className="text-white font-bold text-xs">Submit Ticket</Text>
-                    </>
-                  )}
+                  <Text className={`text-[10px] font-extrabold ${supportSubject === sub ? "text-white" : "text-[#7c8a87]"
+                    }`}>
+                    {sub}
+                  </Text>
                 </TouchableOpacity>
-              </View>
+              ))}
+            </View>
 
-              {/* FAQs Section */}
-              <View className="mt-4 mb-6">
-                <Text className="text-xs font-extrabold text-[#0f3a31] mb-3">Frequently Asked Questions</Text>
-                <View className="space-y-2">
-                  {FAQS.map((faq, idx) => {
-                    const isOpen = activeFaqIndex === idx;
-                    return (
-                      <View
-                        key={idx}
-                        className={`border rounded-2xl overflow-hidden mb-2 ${isOpen ? "bg-white border-[#0f4a3f]/30 shadow-sm" : "bg-white border-[#e5e7eb]"
-                          }`}
-                      >
-                        <TouchableOpacity
-                          onPress={() => setActiveFaqIndex(isOpen ? null : idx)}
-                          className="p-4 flex-row justify-between items-center"
-                        >
-                          <Text className={`text-xs font-bold pr-4 flex-1 ${isOpen ? "text-[#0f4a3f]" : "text-[#0f3a31]"}`}>{faq.q}</Text>
-                          {isOpen ? <ChevronUp size={14} color="#0f4a3f" /> : <ChevronDown size={14} color="#7c8a87" />}
-                        </TouchableOpacity>
-                        {isOpen && (
-                          <View className="px-4 pb-4 pt-3 border-t border-[#f3f4f6] bg-[#f9fafb]">
-                            <Text className="text-xs text-[#4b5563] leading-relaxed font-medium">{faq.a}</Text>
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            </ScrollView>
+            {/* Message Input */}
+            <View className="bg-white border border-[#e5e7eb] rounded-xl p-3 min-h-[90px] justify-between">
+              <TextInput
+                placeholder="Type your issue or query here..."
+                placeholderTextColor="#9ca3af"
+                multiline
+                value={supportMessage}
+                onChangeText={setSupportMessage}
+                className="text-xs text-[#0f3a31] flex-1"
+                style={{ textAlignVertical: "top" }}
+              />
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              onPress={handleSendSupport}
+              disabled={supportSending || supportSuccess}
+              className={`mt-3 py-3 rounded-xl flex-row justify-center items-center space-x-2 ${supportSuccess
+                ? "bg-emerald-500"
+                : "bg-[#0f4a3f]"
+                }`}
+            >
+              {supportSending ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : supportSuccess ? (
+                <>
+                  <CheckCircle size={14} color="#ffffff" />
+                  <Text className="text-white font-bold text-xs">Message Sent!</Text>
+                </>
+              ) : (
+                <>
+                  <Send size={12} color="#ffffff" />
+                  <Text className="text-white font-bold text-xs">Submit Ticket</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+
+          {/* FAQs Section */}
+          <View className="mt-4 mb-6">
+            <Text className="text-xs font-extrabold text-[#0f3a31] mb-3">Frequently Asked Questions</Text>
+            <View className="space-y-2">
+              {FAQS.map((faq, idx) => {
+                const isOpen = activeFaqIndex === idx;
+                return (
+                  <View
+                    key={idx}
+                    className={`border rounded-2xl overflow-hidden mb-2 ${isOpen ? "bg-white border-[#0f4a3f]/30 shadow-sm" : "bg-white border-[#e5e7eb]"
+                      }`}
+                  >
+                    <TouchableOpacity
+                      onPress={() => setActiveFaqIndex(isOpen ? null : idx)}
+                      className="p-4 flex-row justify-between items-center"
+                    >
+                      <Text className={`text-xs font-bold pr-4 flex-1 ${isOpen ? "text-[#0f4a3f]" : "text-[#0f3a31]"}`}>{faq.q}</Text>
+                      {isOpen ? <ChevronUp size={14} color="#0f4a3f" /> : <ChevronDown size={14} color="#7c8a87" />}
+                    </TouchableOpacity>
+                    {isOpen && (
+                      <View className="px-4 pb-4 pt-3 border-t border-[#f3f4f6] bg-[#f9fafb]">
+                        <Text className="text-xs text-[#4b5563] leading-relaxed font-medium">{faq.a}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardSafeSheet>
 
       {/* Smart Calendar Modal */}
       <SmartCalendarModal

@@ -8,7 +8,6 @@ import {
   Alert,
   Modal,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
   Animated,
   StyleSheet,
@@ -47,6 +46,7 @@ const AnimatedView = Animated.View as any;
 
 import { apiFetch } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import KeyboardSafeSheet from "../../components/KeyboardSafeSheet";
 
 type Summary = {
   net_balance: number;
@@ -432,105 +432,93 @@ export default function Dashboard() {
       <View style={{ height: 36 }} />
 
       {/* ════════ FIM Chat Modal ════════ */}
-      <Modal visible={chatOpen} transparent animationType="slide" onRequestClose={() => setChatOpen(false)} statusBarTranslucent>
-        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-          <View style={{ flex: 1, justifyContent: "flex-end" }}>
-            <TouchableOpacity
-              style={StyleSheet.absoluteFillObject}
-              onPress={() => setChatOpen(false)}
-              activeOpacity={1}
-            >
-              <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
-            </TouchableOpacity>
+      <KeyboardSafeSheet
+        visible={chatOpen}
+        onRequestClose={() => setChatOpen(false)}
+        contentStyle={{ backgroundColor: "#0b2d25", borderTopLeftRadius: 28, borderTopRightRadius: 28, minHeight: 420 }}
+      >
+        {/* Chat header */}
+        <View style={s.chatHeader}>
+          <View style={s.chatAvatarWrap}>
+            <Bot size={20} color={C.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.chatTitle}>Ask FIM</Text>
+            <Text style={s.chatOnline}>● Gemini 2.5 Flash · Online</Text>
+          </View>
+          <TouchableOpacity onPress={() => setChatOpen(false)} style={s.chatClose}>
+            <XClose size={16} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
 
-            <View style={s.chatSheet}>
-              <View style={s.chatHandle} />
-
-              {/* Chat header */}
-              <View style={s.chatHeader}>
-                <View style={s.chatAvatarWrap}>
-                  <Bot size={20} color={C.accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.chatTitle}>Ask FIM</Text>
-                  <Text style={s.chatOnline}>● Gemini 2.5 Flash · Online</Text>
-                </View>
-                <TouchableOpacity onPress={() => setChatOpen(false)} style={s.chatClose}>
-                  <XClose size={16} color="#ffffff" />
-                </TouchableOpacity>
+        {/* Messages */}
+        <ScrollView
+          ref={chatScrollRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {chatMsgs.length === 0 && (
+            <View style={{ alignItems: "center", marginTop: 24 }}>
+              <View style={s.chatEmptyIcon}>
+                <Bot size={32} color={C.accent} />
               </View>
-
-              {/* Messages */}
-              <ScrollView
-                ref={chatScrollRef}
-                style={{ flex: 1 }}
-                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}
-                keyboardShouldPersistTaps="handled"
-              >
-                {chatMsgs.length === 0 && (
-                  <View style={{ alignItems: "center", marginTop: 24 }}>
-                    <View style={s.chatEmptyIcon}>
-                      <Bot size={32} color={C.accent} />
-                    </View>
-                    <Text style={s.chatEmptyTitle}>Hi, I'm FIM! 👋</Text>
-                    <Text style={s.chatEmptyBody}>Your personal AI financial advisor. Ask me anything about your money.</Text>
-                    <View style={{ marginTop: 20, width: "100%", gap: 8 }}>
-                      {["Can I afford a car loan?", "How much am I saving?", "Which loan to prepay first?"].map((s_, i) => (
-                        <TouchableOpacity key={i} onPress={() => setChatInput(s_)} style={s.chatSuggestion}>
-                          <Text style={s.chatSuggestionTxt}>{s_}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {chatMsgs.map((m, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      s.bubble,
-                      m.from === "you" ? s.bubbleYou : s.bubbleFim,
-                    ]}
-                  >
-                    <Text style={s.bubbleTxt}>{m.text}</Text>
-                  </View>
+              <Text style={s.chatEmptyTitle}>Hi, I'm FIM! 👋</Text>
+              <Text style={s.chatEmptyBody}>Your personal AI financial advisor. Ask me anything about your money.</Text>
+              <View style={{ marginTop: 20, width: "100%", gap: 8 }}>
+                {["Can I afford a car loan?", "How much am I saving?", "Which loan to prepay first?"].map((s_, i) => (
+                  <TouchableOpacity key={i} onPress={() => setChatInput(s_)} style={s.chatSuggestion}>
+                    <Text style={s.chatSuggestionTxt}>{s_}</Text>
+                  </TouchableOpacity>
                 ))}
-
-                {chatLoading && (
-                  <View style={[s.bubble, s.bubbleFim]}>
-                    <View style={{ flexDirection: "row", gap: 6 }}>
-                      {[0, 1, 2].map((i) => (
-                        <View key={i} style={s.typingDot} />
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </ScrollView>
-
-              {/* Input */}
-              <View style={s.chatInputRow}>
-                <TextInput
-                  value={chatInput}
-                  onChangeText={setChatInput}
-                  editable={!chatLoading}
-                  placeholder="Ask anything about your money…"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  style={s.chatInput}
-                  onSubmitEditing={handleSendChat}
-                  returnKeyType="send"
-                />
-                <TouchableOpacity
-                  onPress={handleSendChat}
-                  disabled={chatLoading || !chatInput.trim()}
-                  style={[s.chatSendBtn, { opacity: chatLoading || !chatInput.trim() ? 0.45 : 1 }]}
-                >
-                  <Send size={16} color="#ffffff" />
-                </TouchableOpacity>
               </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+          )}
+
+          {chatMsgs.map((m, i) => (
+            <View
+              key={i}
+              style={[
+                s.bubble,
+                m.from === "you" ? s.bubbleYou : s.bubbleFim,
+              ]}
+            >
+              <Text style={s.bubbleTxt}>{m.text}</Text>
+            </View>
+          ))}
+
+          {chatLoading && (
+            <View style={[s.bubble, s.bubbleFim]}>
+              <View style={{ flexDirection: "row", gap: 6 }}>
+                {[0, 1, 2].map((i) => (
+                  <View key={i} style={s.typingDot} />
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Input */}
+        <View style={s.chatInputRow}>
+          <TextInput
+            value={chatInput}
+            onChangeText={setChatInput}
+            editable={!chatLoading}
+            placeholder="Ask anything about your money…"
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            style={s.chatInput}
+            onSubmitEditing={handleSendChat}
+            returnKeyType="send"
+          />
+          <TouchableOpacity
+            onPress={handleSendChat}
+            disabled={chatLoading || !chatInput.trim()}
+            style={[s.chatSendBtn, { opacity: chatLoading || !chatInput.trim() ? 0.45 : 1 }]}
+          >
+            <Send size={16} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardSafeSheet>
 
       {/* ════════ Confirm Payment Modal ════════ */}
       <Modal visible={confirmModal} transparent animationType="fade" onRequestClose={() => setConfirmModal(false)}>

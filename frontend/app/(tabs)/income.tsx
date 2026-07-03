@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -33,7 +33,7 @@ const ChevronLeft = ChevronLeftIcon as any;
 const ChevronRight = ChevronRightIcon as any;
 
 import { apiFetch } from "../../lib/api";
-import { useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const months = [
   "January", "February", "March", "April", "May", "June",
@@ -59,9 +59,12 @@ const iconMap: Record<string, any> = {
 
 export default function IncomePage() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [sources, setSources] = useState<Src[]>([]);
   const [prevMonthTotal, setPrevMonthTotal] = useState<number | null>(null);
+  // Only show full-page spinner on very first load (when list is empty)
   const [loading, setLoading] = useState(true);
+  const isInitialLoad = useRef(true);
   const [modalOpen, setModalOpen] = useState(false);
 
   // Form states
@@ -94,9 +97,12 @@ export default function IncomePage() {
   };
 
   const fetchIncome = async (m: number, y: number) => {
-    // Compute previous month/year
     const prevM = m === 1 ? 12 : m - 1;
     const prevY = m === 1 ? y - 1 : y;
+    // Only show full-page spinner on first empty load — not on month changes
+    if (isInitialLoad.current) {
+      setLoading(true);
+    }
     try {
       const [data, prevData] = await Promise.all([
         apiFetch<any[]>(`/api/income?month=${m}&year=${y}`),
@@ -113,14 +119,14 @@ export default function IncomePage() {
       Alert.alert("Error", "Failed to load income sources");
     } finally {
       setLoading(false);
+      isInitialLoad.current = false;
     }
   };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchIncome(selectedMonth, selectedYear);
-    }, [selectedMonth, selectedYear])
-  );
+  // Plain useEffect so it ONLY fires when month/year changes, not on every focus
+  useEffect(() => {
+    fetchIncome(selectedMonth, selectedYear);
+  }, [selectedMonth, selectedYear]);
 
   const handleOpenAdd = () => {
     setEditingIncome(null);
@@ -226,7 +232,7 @@ export default function IncomePage() {
   return (
     <ScrollView className="flex-grow bg-[#f9fafb]">
       {/* Page Title Header */}
-      <View className="px-5 pt-6 pb-3 flex-row items-center justify-between">
+      <View className="px-5 pb-3 flex-row items-center justify-between" style={{ paddingTop: insets.top > 0 ? insets.top + 8 : 16 }}>
         <View>
           <Text className="text-2xl font-extrabold text-[#0f3a31]">Income</Text>
           <View className="flex-row items-center mt-1" style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -281,8 +287,8 @@ export default function IncomePage() {
               style={{
                 backgroundColor:
                   momPct === null ? "rgba(255,255,255,0.1)"
-                  : momUp ? "rgba(52,211,153,0.25)"
-                  : "rgba(248,113,113,0.25)",
+                    : momUp ? "rgba(52,211,153,0.25)"
+                      : "rgba(248,113,113,0.25)",
               }}
             >
               <Text
@@ -290,8 +296,8 @@ export default function IncomePage() {
                 style={{
                   color:
                     momPct === null ? "#ffffff"
-                    : momUp ? "#6ee7b7"
-                    : "#fca5a5",
+                      : momUp ? "#6ee7b7"
+                        : "#fca5a5",
                 }}
               >
                 {momLabel}
@@ -425,9 +431,8 @@ export default function IncomePage() {
                               setFormType(c);
                               setTypeDropdownOpen(false);
                             }}
-                            className={`px-4 py-3 border-b border-[#f3f4f6] ${
-                              formType === c ? "bg-emerald-50/50" : ""
-                            }`}
+                            className={`px-4 py-3 border-b border-[#f3f4f6] ${formType === c ? "bg-emerald-50/50" : ""
+                              }`}
                           >
                             <Text className={`text-xs ${formType === c ? "font-bold text-[#0f4a3f]" : "text-[#0f3a31] font-semibold"}`}>
                               {c}
