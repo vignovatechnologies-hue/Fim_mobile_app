@@ -45,23 +45,25 @@ def signup(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session
     db.refresh(user)
 
     budgets = [
-        Budget(user_id=user.id, category="Food & Dining", budget_amount=15000),
-        Budget(user_id=user.id, category="Shopping", budget_amount=8000),
-        Budget(user_id=user.id, category="Transport", budget_amount=6000),
-        Budget(user_id=user.id, category="Entertainment", budget_amount=4000),
-        Budget(user_id=user.id, category="Home & Bills", budget_amount=20000)
+        Budget(user_id=user.id, category="Food & Dining", budget_amount=0.0),
+        Budget(user_id=user.id, category="Shopping", budget_amount=0.0),
+        Budget(user_id=user.id, category="Transport", budget_amount=0.0),
+        Budget(user_id=user.id, category="Entertainment", budget_amount=0.0),
+        Budget(user_id=user.id, category="Home & Bills", budget_amount=0.0)
     ]
     db.add_all(budgets)
     db.commit()
 
-    # Send OTP email in background — API responds instantly, email is sent concurrently
-    background_tasks.add_task(
-        send_otp_email,
-        to_email=user.email,
-        recipient_name=user.name,
-        otp=verification_code,
-        purpose="signup"
-    )
+    # Send OTP email directly so Vercel Serverless doesn't terminate before dispatch
+    try:
+        send_otp_email(
+            to_email=user.email,
+            recipient_name=user.name,
+            otp=verification_code,
+            purpose="signup"
+        )
+    except Exception as e:
+        print(f"⚠️ Failed to dispatch signup email: {e}")
 
     return {
         "message": "Account created. Check your inbox for the code.",
@@ -152,20 +154,23 @@ def resend_code(background_tasks: BackgroundTasks, payload: dict = Body(...), db
     user.verification_expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
     db.commit()
 
-    # Send OTP email in background — API responds instantly
-    background_tasks.add_task(
-        send_otp_email,
-        to_email=user.email,
-        recipient_name=user.name,
-        otp=code,
-        purpose="resend"
-    )
+    # Send OTP email directly so Vercel Serverless doesn't terminate before dispatch
+    try:
+        send_otp_email(
+            to_email=user.email,
+            recipient_name=user.name,
+            otp=code,
+            purpose="resend"
+        )
+    except Exception as e:
+        print(f"⚠️ Failed to dispatch resend email: {e}")
 
     return {"message": "Verification code resent"}
 
 @router.post("/api/auth/request-reset")
-def request_reset(reset_data: UserResetRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == reset_data.email.lower()).first()
+def request_reset(reset_data: UserResetRequest, db: Session = Depends(get_db)):
+    email_clean = reset_data.email.lower().strip()
+    user = db.query(User).filter(User.email == email_clean).first()
     if not user:
         raise HTTPException(status_code=404, detail="No account found for this email")
 
@@ -175,14 +180,16 @@ def request_reset(reset_data: UserResetRequest, background_tasks: BackgroundTask
     user.reset_expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
     db.commit()
 
-    # Send reset code email in background — API responds instantly
-    background_tasks.add_task(
-        send_otp_email,
-        to_email=user.email,
-        recipient_name=user.name,
-        otp=code,
-        purpose="reset"
-    )
+    # Send reset code email directly so Vercel Serverless doesn't terminate before dispatch
+    try:
+        send_otp_email(
+            to_email=user.email,
+            recipient_name=user.name,
+            otp=code,
+            purpose="reset"
+        )
+    except Exception as e:
+        print(f"⚠️ Failed to dispatch reset email: {e}")
 
     return {"message": "Reset code sent"}
 
