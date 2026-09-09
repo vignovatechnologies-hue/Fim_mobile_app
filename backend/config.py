@@ -3,12 +3,16 @@ from typing import Optional
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "Yashwanth%40567"
-    DB_HOST: str = "localhost"
-    DB_NAME: str = "smartemi"
-    DB_PORT: int = 5433
-    JWT_SECRET_KEY: str = "supersecretkeyforfimsmartemiapp123456"
+    # Database Configuration — loaded from .env / environment variables
+    DATABASE_URL: Optional[str] = None
+    DB_USER: Optional[str] = None
+    DB_PASSWORD: Optional[str] = None
+    DB_HOST: Optional[str] = None
+    DB_NAME: Optional[str] = None
+    DB_PORT: Optional[int] = 5432
+
+    # JWT Configuration — loaded from .env / environment variables
+    JWT_SECRET_KEY: Optional[str] = None
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
 
@@ -43,10 +47,19 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        if self.DATABASE_URL:
+            url = self.DATABASE_URL
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql://", 1)
+            return url
         import urllib.parse
-        # Ensure password is URL encoded so characters like @ do not break URL parsing
-        quoted_password = urllib.parse.quote_plus(urllib.parse.unquote(self.DB_PASSWORD))
-        return f"postgresql://{self.DB_USER}:{quoted_password}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        db_user = self.DB_USER or "postgres"
+        db_pass = self.DB_PASSWORD or ""
+        db_host = self.DB_HOST or "localhost"
+        db_name = self.DB_NAME or "smartemi"
+        db_port = self.DB_PORT or 5432
+        quoted_password = urllib.parse.quote_plus(urllib.parse.unquote(db_pass))
+        return f"postgresql://{db_user}:{quoted_password}@{db_host}:{db_port}/{db_name}"
 
     class Config:
         env_file = os.path.join(os.path.dirname(__file__), ".env")

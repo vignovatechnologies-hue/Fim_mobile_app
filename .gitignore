@@ -1,1 +1,36 @@
+# Secrets & environment
+.env
+*.env
 backend/.env
+**/.env
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+venv/
+**/venv/
+.venv/
+**/.venv/
+env/
+*.log
+*.sqlite3
+
+# Vercel & IDE
+.vercel/
+**/.vercel/
+.idea/
+.vscode/
+
+# Flutter / Dart
+build/
+**/build/
+.dart_tool/
+**/.dart_tool/
+.pub-cache/
+.pub/
+
+# OS files
+.DS_Store
+Thumbs.db

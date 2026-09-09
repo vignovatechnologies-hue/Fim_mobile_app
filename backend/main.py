@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import modular routers
-from routes import auth, loans, transactions, income, savings, profile, dashboard, insights, payments
+from routes import auth, loans, transactions, income, savings, profile, dashboard, insights, payments, localization
 
 app = FastAPI(title="FIM — Financial Intelligence Manager API")
 
@@ -57,6 +57,14 @@ def check_and_update_db():
             if not res5.fetchone():
                 conn.execute(text("ALTER TABLE users ADD COLUMN reminders_enabled BOOLEAN NOT NULL DEFAULT TRUE"))
                 print("[Migration] Added reminders_enabled column to users table")
+
+            # Check if preferred_language exists in users
+            res6 = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='preferred_language'"
+            ))
+            if not res6.fetchone():
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language VARCHAR(10) NOT NULL DEFAULT 'en'"))
+                print("[Migration] Added preferred_language column to users table")
     except Exception as e:
         print(f"[Migration] Error updating database tables: {e}")
 
@@ -80,24 +88,33 @@ async def start_reminder_scheduler():
         await asyncio.sleep(24 * 3600)
 
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     # Auto-create all tables if they don't exist (safe for fresh deployments)
-    from database import Base, engine
+    from database import Base, engine, SessionLocal
     Base.metadata.create_all(bind=engine)
     print("[Startup] Database tables created/verified.")
     check_and_update_db()
+    
+    # Seed localization data
+    db = SessionLocal()
+    try:
+        localization.seed_localization_data(db)
+    finally:
+        db.close()
+
     import asyncio
     asyncio.create_task(start_reminder_scheduler())
 
 
 
-# Configure CORS
+# Configure CORS for Flutter Web & Mobile
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For local testing, allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include all modular routers
@@ -110,6 +127,7 @@ app.include_router(profile.router)
 app.include_router(dashboard.router)
 app.include_router(insights.router)
 app.include_router(payments.router)
+app.include_router(localization.router)
 
 @app.get("/")
 def read_root():
